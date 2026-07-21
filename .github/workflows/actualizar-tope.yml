@@ -2,7 +2,7 @@ name: Actualizar tope MOPRE
 
 on:
   schedule:
-    - cron: '17 12 2,5,8,11,14 * *'
+    - cron: '17 12 * * *'
   workflow_dispatch: {}
 
 permissions:
