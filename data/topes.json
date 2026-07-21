@@ -1,5 +1,5 @@
 {
- "actualizado": null,
+ "actualizado": "2026-07-21T22:58:52+00:00",
  "alertas": [],
  "topes": {
   "202604": {
@@ -21,6 +21,11 @@
    "estado": "confirmado",
    "fuente": "Resolución ANSES 186/2026",
    "valor": 4509567.41
+  },
+  "202608": {
+   "estado": "estimado",
+   "fuente": "calculado por movilidad (IPC 2026-06: 1.89%)",
+   "valor": 4594798.23
   }
  }
 }
