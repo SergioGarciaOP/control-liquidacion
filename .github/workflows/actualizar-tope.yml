@@ -1,0 +1,31 @@
+name: Actualizar tope MOPRE
+
+on:
+  schedule:
+    - cron: '17 12 2,5,8,11,14 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Ejecutar robot
+        run: python3 scripts/actualizar_tope.py
+
+      - name: Publicar cambios si los hay
+        run: |
+          git config user.name  "robot-tope-mopre"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet data/topes.json; then
+            git add data/topes.json
+            git commit -m "Actualizacion automatica del tope MOPRE"
+            git push
+          else
+            echo "Sin cambios este dia."
+          fi
