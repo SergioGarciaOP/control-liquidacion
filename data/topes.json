@@ -1,0 +1,26 @@
+{
+ "actualizado": null,
+ "alertas": [],
+ "topes": {
+  "202604": {
+   "estado": "confirmado",
+   "fuente": "Resolución ANSES 74/2026",
+   "valor": 4162912.57
+  },
+  "202605": {
+   "estado": "confirmado",
+   "fuente": "Resolución ANSES 110/2026",
+   "valor": 4303619.01
+  },
+  "202606": {
+   "estado": "confirmado",
+   "fuente": "Resolución ANSES 139/2026",
+   "valor": 4414652.38
+  },
+  "202607": {
+   "estado": "confirmado",
+   "fuente": "Resolución ANSES 186/2026",
+   "valor": 4509567.41
+  }
+ }
+}

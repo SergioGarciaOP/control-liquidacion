@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Liquidación v2</title>
+<style>
+  :root{
+    --navy:#2E4053; --navy-deep:#1B2631; --navy-soft:#3E5771;
+    --paper:#F7F9FA; --card:#FFFFFF; --line:#DDE4E9;
+    --ink:#22313F; --ink-soft:#5D6D7E; --ink-faint:#8FA0AE;
+    --ok-bg:#D4EFDF; --ok-tx:#1E8449;
+    --bad-bg:#FADBD8; --bad-tx:#C0392B;
+    --warn-bg:#FCF3CF; --warn-tx:#9A7D0A;
+    --accent:#1F4E79; --accent-soft:#EAF2F8;
+    --mono:'Consolas','SF Mono',ui-monospace,monospace;
+    --sans:'Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px}
+  header{background:linear-gradient(135deg,var(--navy-deep) 0%,var(--navy) 70%,var(--navy-soft) 100%);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand h1{font-size:19px;font-weight:600;letter-spacing:.4px}
+  .brand p{font-size:11.5px;opacity:.75;margin-top:2px;letter-spacing:.3px}
+  .brand .tag{display:inline-block;font-family:var(--mono);font-size:10px;background:rgba(255,255,255,.14);padding:1px 8px;border-radius:10px;margin-left:8px;vertical-align:2px}
+  header .spacer{flex:1}
+  .hbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;transition:background .15s}
+  .hbtn:hover{background:rgba(255,255,255,.22)}
+  .hbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  nav{background:var(--card);border-bottom:1px solid var(--line);padding:0 28px;display:flex;gap:4px;overflow-x:auto}
+  nav button{background:none;border:none;border-bottom:3px solid transparent;padding:13px 14px;font-size:13.5px;color:var(--ink-soft);cursor:pointer;white-space:nowrap;font-family:var(--sans)}
+  nav button:hover{color:var(--ink)}
+  nav button.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600}
+  nav button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  nav button .pill{font-family:var(--mono);font-size:10.5px;background:var(--bad-bg);color:var(--bad-tx);border-radius:9px;padding:1px 7px;margin-left:6px;font-weight:700}
+  nav button .pill.zero{background:var(--ok-bg);color:var(--ok-tx)}
+  main{padding:22px 28px;max-width:1500px;margin:0 auto}
+  .view{display:none}
+  .view.active{display:block}
+  .drop{border:2px dashed var(--line);border-radius:10px;background:var(--card);padding:30px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+  .drop:hover,.drop.over{border-color:var(--navy);background:var(--accent-soft)}
+  .drop h2{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:6px}
+  .drop p{color:var(--ink-soft);font-size:13px}
+  .drop .fmt{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:10px}
+  .filelist{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .fchip{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 8px 5px 14px;font-size:12.5px}
+  .fchip .n{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .fchip b{color:var(--navy)}
+  .fchip button{border:none;background:var(--line);border-radius:50%;width:18px;height:18px;line-height:16px;cursor:pointer;color:var(--ink-soft);font-size:11px}
+  .fchip button:hover{background:var(--bad-bg);color:var(--bad-tx)}
+  .banner{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+  .banner.warn{background:var(--warn-bg);color:var(--warn-tx);border:1px solid #EDDFA8}
+  .banner.bad{background:var(--bad-bg);color:var(--bad-tx);border:1px solid #F0C4C0}
+  .banner.ok{background:var(--ok-bg);color:var(--ok-tx);border:1px solid #BFE5CE}
+  .banner b{font-weight:700}
+  .banner a{color:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:18px}
+  .kcard{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .kcard:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(30,50,70,.10)}
+  .kcard:focus-visible{outline:2px solid var(--accent)}
+  .kcard .kt{background:var(--navy);color:#fff;font-size:11.5px;font-weight:600;padding:7px 11px;letter-spacing:.2px;min-height:32px;display:flex;align-items:center}
+  .kcard .kv{font-size:30px;font-weight:700;padding:10px 11px 2px;font-family:var(--mono)}
+  .kcard .kd{font-size:11px;color:var(--ink-soft);padding:0 11px 11px;line-height:1.4}
+  .kv.bad{color:var(--bad-tx)} .kv.warn{color:var(--warn-tx)} .kv.ok{color:var(--ok-tx)}
+  .stats{display:flex;gap:22px;flex-wrap:wrap;margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 20px}
+  .stat .sv{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--navy)}
+  .stat .sl{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0 12px}
+  select,input[type=text],input[type=number]{border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--card);color:var(--ink);font-family:var(--sans)}
+  select:focus,input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+  .btn{background:var(--navy);color:#fff;border:none;border-radius:6px;padding:9px 16px;font-size:13px;cursor:pointer}
+  .btn:hover{background:var(--navy-soft)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn.ghost{background:var(--card);color:var(--navy);border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--accent-soft)}
+  label.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);cursor:pointer}
+  .twrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:64vh}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  thead th{position:sticky;top:0;background:var(--navy);color:#fff;font-weight:600;font-size:11px;padding:8px 9px;text-align:left;white-space:nowrap;letter-spacing:.2px;z-index:2}
+  tbody td{padding:6px 9px;border-bottom:1px solid #EEF2F5;white-space:nowrap}
+  tbody tr:hover{background:#F4F8FB}
+  td.num{font-family:var(--mono);text-align:right;font-size:11.5px}
+  td.ctr{text-align:center}
+  .st{display:inline-block;border-radius:4px;padding:2px 8px;font-size:10.5px;font-weight:700}
+  .st.ok{background:var(--ok-bg);color:var(--ok-tx)}
+  .st.bad{background:var(--bad-bg);color:var(--bad-tx)}
+  .st.warn{background:var(--warn-bg);color:var(--warn-tx)}
+  .st.mut{background:#EFF2F4;color:var(--ink-faint)}
+  .empty{padding:44px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:900px){.pgrid{grid-template-columns:1fr}}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+  .pcard.full{grid-column:1 / -1}
+  .pcard h3{font-size:14px;color:var(--navy);margin-bottom:4px}
+  .pcard .hint{font-size:12px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5}
+  .ptable{width:100%}
+  .ptable input{width:100%;font-family:var(--mono);font-size:12.5px}
+  .ptable td{padding:4px 6px 4px 0;border:none}
+  .ptable th{font-size:11px;color:var(--ink-soft);text-align:left;padding:4px 6px 4px 0;background:none;position:static}
+  .ptable .del{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:4px}
+  .ptable .del:hover{color:var(--bad-tx)}
+  .prow-add{margin-top:8px}
+  .savemsg{font-size:12px;color:var(--ok-tx);margin-left:10px;opacity:0;transition:opacity .3s}
+  .savemsg.show{opacity:1}
+  .dic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .dic-card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .dic-card h4{padding:9px 14px;font-size:12.5px;color:#fff}
+  .dic-card ul{list-style:none;padding:8px 0;max-height:340px;overflow:auto}
+  .dic-card li{padding:4px 14px;font-size:12px;display:flex;gap:10px}
+  .dic-card li code{font-family:var(--mono);font-weight:700;min-width:44px}
+  footer{padding:18px 28px;color:var(--ink-faint);font-size:11.5px;text-align:center}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Control de Liquidación <span class="tag">v2 · GANANCIAS · MOPRE · ESCALAS · ANTIGÜEDAD · CONVENIOS</span></h1>
+    <p>FATLYF · APUAYE · Fuera de convenio — subí los volcados mensuales y el control corre solo</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="hbtn" id="btnExport" title="Descarga un Excel con todos los resultados">⬇ Exportar informe (.xlsx)</button>
+  <button class="hbtn" id="btnClear">Limpiar todo</button>
+</header>
+
+<nav id="nav">
+  <button data-v="resumen" class="active">Resumen</button>
+  <button data-v="ganancias">Ganancias y MOPRE</button>
+  <button data-v="escala">Escala y Antigüedad</button>
+  <button data-v="auditoria">Auditoría Convenios</button>
+  <button data-v="aumentos">Aumentos</button>
+  <button data-v="parametros">Parámetros</button>
+  <button data-v="ayuda">Diccionario y ayuda</button>
+</nav>
+
+<main>
+  <!-- ============ RESUMEN ============ -->
+  <section class="view active" id="v-resumen">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Subir archivos">
+      <h2>Arrastrá acá los archivos del mes (o hacé clic para elegirlos)</h2>
+      <p>Volcado crudo de liquidación en Excel — podés subir varios meses juntos para comparar. También acepta el export de categorías SAP (Nº pers. + GrProf): lo detecta solo.</p>
+      <p class="fmt">Liquidación: Número de personal · Clase conv. · Período · CC-nómina · Importe &nbsp;·&nbsp; Categorías: Nº pers. · GrProf</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv" multiple hidden>
+    </div>
+    <div class="filelist" id="filelist"></div>
+    <div id="banners"></div>
+    <div class="toolbar" id="resumenBar" style="display:none">
+      <label style="font-size:13px;color:var(--ink-soft)">Período:</label>
+      <select id="selPeriodo"></select>
+    </div>
+    <div class="stats" id="stats" style="display:none"></div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- ============ GANANCIAS ============ -->
+  <section class="view" id="v-ganancias">
+    <div class="toolbar">
+      <select id="gPeriodo"></select>
+      <input type="text" id="gBuscar" placeholder="Buscar legajo…" style="width:140px">
+      <select id="gConv"><option value="">Todos los convenios</option><option value="AY">APUAYE (AY)</option><option value="FA">FATLYF (FA)</option><option value="FC">Fuera de convenio (FC)</option></select>
+      <label class="chk"><input type="checkbox" id="gSolo"> Sólo alertas</label>
+      <span id="gCount" style="font-size:12px;color:var(--ink-faint);margin-left:auto"></span>
+    </div>
+    <div class="twrap"><table id="gTable">
+      <thead><tr>
+        <th>Legajo</th><th>Conv.</th><th>Total Remunerativo</th><th>Límite 35%</th><th>Imp. Retenido (/4T2)</th><th>Exceso</th><th>Estado Ganancias</th>
+        <th>Tope MOPRE</th><th>/321 SIJP</th><th>Exc.</th><th>/351 INSSJP</th><th>Exc.</th><th>/361 O.Soc.</th><th>Exc.</th><th>Estado MOPRE</th>
+      </tr></thead><tbody></tbody>
+    </table><div class="empty" id="gEmpty">Subí archivos en la pestaña Resumen para ver el detalle.</div></div>
+  </section>
+
+  <!-- ============ ESCALA Y ANTIGÜEDAD ============ -->
+  <section class="view" id="v-escala">
+    <div class="toolbar">
+      <select id="ePeriodo"></select>
+      <input type="text" id="eBuscar" placeholder="Buscar legajo…" style="width:140px">
+      <select id="eConv"><option value="">Todos los convenios</option><option value="AY">APUAYE (AY)</option><option value="FA">FATLYF (FA)</option><option value="FC">Fuera de convenio (FC)</option></select>
+      <label class="chk"><input type="checkbox" id="eSolo"> Sólo alertas</label>
+      <span id="eCount" style="font-size:12px;color:var(--ink-faint);margin-left:auto"></span>
+    </div>
+    <div class="twrap"><table id="eTable">
+      <thead><tr>
+        <th>Legajo</th><th>Conv.</th><th>Clave SAP</th><th>Categoría</th><th>Básico liquidado</th><th>Básico escala</th><th>Dif.</th><th>Estado Básico</th>
+        <th>Present. (0306)</th><th>Present. esperado</th><th>Estado Present.</th>
+        <th>Antig. (0040)</th><th>Años deriv.</th><th>Estado Antig.</th>
+        <th>Adic. (0041)</th><th>Adic. esperado</th><th>Estado 0041</th>
+      </tr></thead><tbody></tbody>
+    </table><div class="empty" id="eEmpty">Subí archivos en la pestaña Resumen para ver el detalle.</div></div>
+  </section>
+
+  <!-- ============ AUDITORÍA ============ -->
+  <section class="view" id="v-auditoria">
+    <div class="toolbar">
+      <select id="aPeriodo"></select>
+      <input type="text" id="aBuscar" placeholder="Buscar legajo…" style="width:140px">
+      <label class="chk"><input type="checkbox" id="aSolo"> Sólo alertas</label>
+      <span id="aCount" style="font-size:12px;color:var(--ink-faint);margin-left:auto"></span>
+    </div>
+    <div class="twrap"><table id="aTable">
+      <thead><tr>
+        <th>Legajo</th><th>Conv.</th><th>0468 (No Rem)</th><th>Estado 0468</th>
+        <th>0210 (Serv.Extr.)</th><th>¿0308/09/10?</th><th>Estado 0210</th>
+        <th>Hs. Extras (0308+09+10)</th><th>Estado Hs. AY</th>
+        <th>0251 mes ant.</th><th>0251 actual</th><th>Var. $</th><th>Var. %</th><th>Estado 0251</th>
+      </tr></thead><tbody></tbody>
+    </table><div class="empty" id="aEmpty">Subí archivos en la pestaña Resumen para ver el detalle.</div></div>
+  </section>
+
+  <!-- ============ AUMENTOS ============ -->
+  <section class="view" id="v-aumentos">
+    <div class="toolbar">
+      <select id="uPeriodo"></select>
+      <input type="text" id="uBuscar" placeholder="Buscar legajo…" style="width:140px">
+      <select id="uConv"><option value="">Todos los convenios</option><option value="AY">APUAYE (AY)</option><option value="FA">FATLYF (FA)</option><option value="FC">Fuera de convenio (FC)</option></select>
+      <label class="chk"><input type="checkbox" id="uSolo"> Sólo alertas</label>
+      <span id="uCount" style="font-size:12px;color:var(--ink-faint);margin-left:auto"></span>
+    </div>
+    <div class="twrap"><table id="uTable">
+      <thead><tr>
+        <th>Legajo</th><th>Conv.</th><th>Clave SAP</th><th>Concepto</th><th>Sueldo mes anterior</th><th>Sueldo actual</th><th>Aumento %</th><th>Paritaria %</th><th>Estado Aumento</th>
+      </tr></thead><tbody></tbody>
+    </table><div class="empty" id="uEmpty">Subí archivos en la pestaña Resumen para ver el detalle. Para comparar hace falta el mes anterior cargado.</div></div>
+  </section>
+
+  <!-- ============ PARÁMETROS ============ -->
+  <section class="view" id="v-parametros">
+    <div class="pgrid">
+      <div class="pcard">
+        <h3>Topes MOPRE por período</h3>
+        <p class="hint">Base imponible máxima de cada mes. Se completa sola desde el robot de actualización (abajo); también podés cargar o corregir valores a mano — lo manual siempre tiene prioridad.</p>
+        <div style="background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+          <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px"><b>Actualización automática</b> — URL del archivo de topes mantenido por el robot (GitHub):</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="topesUrl" style="flex:1;min-width:220px;font-family:var(--mono);font-size:11.5px" placeholder="https://TUUSUARIO.github.io/TUREPO/data/topes.json">
+            <button class="btn ghost" id="btnTopesFetch">↻ Actualizar ahora</button>
+          </div>
+          <div id="topesStatus" style="font-size:11.5px;color:var(--ink-soft);margin-top:6px"></div>
+        </div>
+        <table class="ptable" id="topesTable">
+          <thead><tr><th>PERÍODO (AAAAMM)</th><th>TOPE ($)</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="prow-add">
+          <button class="btn ghost" id="btnAddTope">+ Agregar período</button>
+          <span class="savemsg" id="topeSaved">Guardado ✓</span>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+        <h3>% de aumento paritaria por período</h3>
+        <p class="hint">El % de incremento salarial de cada mes (ej.: Mayo 2026 = 3,5). Se usa para el control del 0251 y de los aumentos.</p>
+        <table class="ptable" id="aumTable">
+          <thead><tr><th>PERÍODO (AAAAMM)</th><th>AUMENTO (%)</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="prow-add">
+          <button class="btn ghost" id="btnAddAum">+ Agregar período</button>
+          <span class="savemsg" id="aumSaved">Guardado ✓</span>
+        </div>
+      </div>
+      <div class="pcard">
+        <h3>Tasas del control</h3>
+        <p class="hint">Se aplican a todos los períodos. Modificalas sólo si cambia la normativa o el convenio.</p>
+        <table class="ptable">
+          <tr><td style="width:64%">Impuesto a las Ganancias (límite s/ Total Rem.)</td><td><input type="number" step="0.01" id="rGan"> %</td></tr>
+          <tr><td>Aporte SIJP <code>/321</code></td><td><input type="number" step="0.01" id="rSijp"> %</td></tr>
+          <tr><td>Aporte INSSJP <code>/351</code></td><td><input type="number" step="0.01" id="rInssjp"> %</td></tr>
+          <tr><td>Aporte Obra Social <code>/361</code></td><td><input type="number" step="0.01" id="rOsoc"> %</td></tr>
+          <tr><td>Antigüedad FATLYF (% por año s/ básico escala)</td><td><input type="number" step="0.1" id="rAntFA"> %</td></tr>
+          <tr><td>Antigüedad APUAYE (% por año s/ básico escala)</td><td><input type="number" step="0.1" id="rAntAY"> %</td></tr>
+        </table>
+        <div class="prow-add">
+          <button class="btn" id="btnSaveParams">Guardar parámetros</button>
+          <span class="savemsg" id="paramSaved">Guardado ✓</span>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+        <h3>Categorías SAP (Grupo profesional)</h3>
+        <p class="hint" id="sapInfo"></p>
+        <button class="btn ghost" id="btnSapUpload">⬆ Cargar export SAP (Nº pers. + GrProf)</button>
+        <input type="file" id="sapFile" accept=".xlsx,.xls" hidden>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+        <h3>Copia de seguridad de la configuración</h3>
+        <p class="hint">Descargá tu configuración completa (topes, tasas, paritarias, escalas y categorías SAP) para reusarla en otra PC.</p>
+        <button class="btn ghost" id="btnCfgExp">⬇ Descargar configuración</button>
+        <button class="btn ghost" id="btnCfgImp">⬆ Cargar configuración</button>
+        <input type="file" id="cfgFile" accept=".json" hidden>
+      </div>
+      <div class="pcard full">
+        <h3>Escalas salariales oficiales por período</h3>
+        <p class="hint">Valores de la paritaria por categoría. Elegí el período y editá si sale una escala nueva. "Nuevo período" copia la última escala aplicándole un % de aumento. APUAYE no publica presentismo en escala (queda vacío).</p>
+        <div class="toolbar" style="margin-top:0">
+          <select id="escPeriodo"></select>
+          <button class="btn ghost" id="btnEscNuevo">+ Nuevo período (copia con % de aumento)</button>
+          <button class="btn ghost" id="btnEscBorrar">Eliminar período</button>
+          <span class="savemsg" id="escSaved">Guardado ✓</span>
+        </div>
+        <div class="twrap" style="max-height:none"><table id="escTable">
+          <thead><tr><th>Clave SAP</th><th>Conv.</th><th>Categoría</th><th>Básico</th><th>Presentismo 12%</th><th>Adic. Antig. ≥10 y &lt;25</th><th>Adic. Antig. ≥25</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AYUDA ============ -->
+  <section class="view" id="v-ayuda">
+    <div class="pcard" style="margin-bottom:16px">
+      <h3>Qué controla la aplicación</h3>
+      <p class="hint" style="margin-bottom:0">
+        <b>1 · Ganancias 35%:</b> alerta si la retención (<code>/4T2</code>) supera el 35% del Total Remunerativo.&nbsp;
+        <b>2 · Topes MOPRE:</b> alerta si <code>/321</code>, <code>/351</code> o <code>/361</code> superan la tasa sobre el tope del período.&nbsp;
+        <b>3 · Básico vs escala:</b> compara el 0001 contra el básico oficial de la categoría SAP (GrProf) del empleado. "Menor (¿proporcional?)" suele ser ingreso a mitad de mes, no error.&nbsp;
+        <b>4 · Presentismo (sólo FATLYF):</b> el 0306 debe ser el 12% del básico de escala; es todo-o-nada, los ceros suelen ser ausencias.&nbsp;
+        <b>5 · Antigüedad derivada:</b> años = 0040 ÷ (básico escala × tasa del convenio: FA 2%, AY 1,6%). Si no da un número entero, alerta. Método validado al centavo contra la fecha de antigüedad reconocida de SAP (IT0041 tipo 02); reemplazable por el dato crudo cuando el administrador de SAP lo exporte.&nbsp;
+        <b>6 · Adicional antigüedad (0041):</b> ≥10 y &lt;25 años → tramo 1; ≥25 → tramo 2 (criterio inclusivo verificado con los casos de 10 años exactos).&nbsp;
+        <b>7 · 0468:</b> sólo FATLYF; alerta si aparece en otro convenio o si a un FA activo le falta.&nbsp;
+        <b>8 · 0210:</b> es la hora extra de APUAYE; se marca si aparece fuera de AY.&nbsp;
+        <b>9 · Hs. extras en APUAYE:</b> los AY no deben tener 0308/0309/0310 (usan el 0210).&nbsp;
+        <b>10 · 0251 vs paritaria:</b> el "A Cta. Futuros Aumentos" debe subir el mismo % que el incremento salarial del período.&nbsp;
+        <b>11 · Aumentos:</b> compara el sueldo (0001; en FC el 0003) contra el mes anterior y el % de paritaria — pedido específico para fuera de convenio.
+        El Total Remunerativo suma los 34 conceptos remunerativos sobre <b>toda la corrida del mes</b> (incluye retroactivos), igual que el archivo de Control. Las categorías provienen del campo "Grupo profesional" de SAP (mapa L?=FATLYF con LI=Ingreso, U?=APUAYE) con fecha clave al cierre del mes controlado.
+      </p>
+    </div>
+    <div class="dic-grid" id="dicGrid"></div>
+  </section>
+</main>
+
+<footer>Funciona sin conexión — los archivos se procesan en tu navegador y no se envían a ningún servidor. · Convenios: AY = APUAYE · FA = FATLYF · FC = Fuera de convenio · Categorías: LI=Ingreso · LA–LF=A–F · UA–UE=U-A–U-E</footer>
+
+<script>
+/* ================= CLASIFICACIÓN OFICIAL ================= */
+const REM = ["0001","0003","0022","0040","0041","0055","0200","0208","0210","0212","0251","0252","0257","0258","0297","0299","0300","0306","0308","0309","0310","0312","0316","0330","0335","0347","0360","0361","0372","0385","0365","0366","0675","/109"];
+const NOREM = ["0407","0411","0448","0449","0468","0499","9322","0501"];
+const DESC = ["0503","0505","0518","0602","0606","0612","0650","0651","0652","0659","0661","0666","0670","0695","0696","0950","0990","0994","0996","0997","0999","9DES","0981","0991","/321","/351","/361","/4T2"];
+const DESCRIPCIONES = {"0001":"Sueldo Básico","0003":"Sueldo","0022":"Asignación Personal","0040":"Bonif. p/Antigüedad","0041":"Adicional por antigüedad","0055":"Falla de Caja","0200":"Bonif. p/Zona","0208":"Tareas profesionales","0210":"Serv. Extraordinario","0212":"Adicional Operativo","0251":"A Cta. Fut. Aumentos","0252":"Extensión de Jornada","0257":"Asignación Personal Fija","0258":"A Cta. Fut. Aumentos Fija","0297":"Func. Jerárquica Operativa","0299":"Tareas Riesgosas","0300":"Bonificación p/turno","0306":"Presentismo","0308":"Hs. Extras 50%","0309":"Hs. Extras 100%","0310":"Horas Extras Voluntarias","0312":"Reemplazos Informado","0316":"Días descon. Vacaciones","0330":"Bon. Anual Eficiencia","0335":"SAC de BAE","0347":"Rec. Mayor Gto. Movilidad","0360":"R.A.V.","0361":"SAC de RAV","0372":"Suspensión","0385":"Descuento Presentismo","0365":"Ajuste RAV","0366":"Ajuste SAC S/RAV","0675":"Zona Desfavorable","/109":"Pago de Vacaciones","0407":"Guardería","0411":"Beca Art. 37 CCT","0448":"Reint. Luz p/Sist. Fact.","0449":"Reint. Luz p/Sist. Fact.","0468":"Suma No Rem. Acta Acd. 08/10","0499":"Redondeo","9322":"Plus Adicional Vacaciones","0501":"Viandas","0503":"Fdo. Compensador FATLyF","0505":"Fdo. Compensador APUAYE","0518":"Seg. de Vida Col. Volunt.","0602":"Fondo Solidario","0606":"Asoc. Prof. Univ. AYE","0612":"Fondo Solidario","0650":"Contrib. Solid. Pta. Alta","0651":"Contrib. Solid. R.N. y NQN","0652":"Contribución Solidaria Ap.","0659":"Sindicato Pta. Alta","0661":"Sind. R.N. y N. L. y F.","0666":"Ajuste OSDE Personal","0670":"AJ Res. MTySS 268/09","0695":"Res. MTySS 268/09","0696":"Res. MTEySS 170/10","0950":"Cuota Alimentaria %","0990":"Cuota Alimentaria","0994":"Cta. Alimentaria Bco. Nación","0996":"Cuota Alim. Bco. Pcia. BsAs","0997":"Cta. Alim. Bco. Pcia. Nqn","0999":"Cta. Alimentaria Bco. Patag.","9DES":"Descuento Anticipo","0981":"Embargo - Cuotas Bco. Pat.","0991":"Cuota Alimentaria","/321":"Aporte SIJP sobre sueldo","/351":"Aporte INSSJP sobre suel","/361":"Aporte O. Social sobre sueldo","/4T2":"Impuesto pagado/devuelto"};
+const ESC_META = {LI:{conv:'FA',cat:'Ingreso'},LA:{conv:'FA',cat:'A'},LB:{conv:'FA',cat:'B'},LC:{conv:'FA',cat:'C'},LD:{conv:'FA',cat:'D'},LE:{conv:'FA',cat:'E'},LF:{conv:'FA',cat:'F'},UA:{conv:'AY',cat:'U-A'},UB:{conv:'AY',cat:'U-B'},UC:{conv:'AY',cat:'U-C'},UD:{conv:'AY',cat:'U-D'},UE:{conv:'AY',cat:'U-E'}};
+const ESC_ORDEN = ['LI','LA','LB','LC','LD','LE','LF','UA','UB','UC','UD','UE'];
+
+/* ================= ESTADO ================= */
+let CONFIG = {
+  topesUrl: "data/topes.json",   /* URL del archivo de topes mantenido por el robot (GitHub). Editable en Parámetros. */
+  topes: { "202604": 4162912.57, "202605": 4303619.01 },
+  tasas: { gan: 35, sijp: 11, inssjp: 3, osoc: 3, antFA: 2, antAY: 1.6 },
+  aumentos: { "202604": 5, "202605": 3.5 },
+  tol: { basico: 1, antig: 0.02, c251: 0.01, porc: 0.1 },
+  escalas: {
+    "202604": {
+      LI:{b:1347669.744791,p:161720.369375,a1:54926.620552,a2:109853.241105},
+      LA:{b:1473088.467765,p:176770.616132,a1:54926.620552,a2:109853.241105},
+      LB:{b:1535797.829252,p:184295.73951,a1:54926.620552,a2:109853.241105},
+      LC:{b:1599524.94567,p:191942.99348,a1:54926.620552,a2:109853.241105},
+      LD:{b:1724943.668644,p:206993.240237,a1:54926.620552,a2:109853.241105},
+      LE:{b:1851380.146548,p:222165.617586,a1:54926.620552,a2:109853.241105},
+      LF:{b:2103196.203007,p:252383.544361,a1:54926.620552,a2:109853.241105},
+      UA:{b:2348002.618621,p:null,a1:80385.663485,a2:133969.032097},
+      UB:{b:2770162.951587,p:null,a1:80385.663485,a2:133969.032097},
+      UC:{b:3120930.283666,p:null,a1:80385.663485,a2:133969.032097},
+      UD:{b:3548225.62473,p:null,a1:80385.663485,a2:133969.032097},
+      UE:{b:3914773.469551,p:null,a1:80385.663485,a2:133969.032097}
+    },
+    "202605": {
+      LI:{b:1394838.185858,p:167380.582303,a1:56849.052272,a2:113698.104543},
+      LA:{b:1524646.564137,p:182957.587696,a1:56849.052272,a2:113698.104543},
+      LB:{b:1589550.753276,p:190746.090393,a1:56849.052272,a2:113698.104543},
+      LC:{b:1655508.318768,p:198660.998252,a1:56849.052272,a2:113698.104543},
+      LD:{b:1785316.697046,p:214238.003646,a1:56849.052272,a2:113698.104543},
+      LE:{b:1916178.451678,p:229941.414201,a1:56849.052272,a2:113698.104543},
+      LF:{b:2176808.070112,p:261216.968413,a1:56849.052272,a2:113698.104543},
+      UA:{b:2430182.710273,p:null,a1:83199.161707,a2:138657.948221},
+      UB:{b:2867118.654893,p:null,a1:83199.161707,a2:138657.948221},
+      UC:{b:3230162.843594,p:null,a1:83199.161707,a2:138657.948221},
+      UD:{b:3672413.521595,p:null,a1:83199.161707,a2:138657.948221},
+      UE:{b:4051790.540986,p:null,a1:83199.161707,a2:138657.948221}
+    }
+  }
+};
+let TOPESREMOTOS = { doc:null, aplicados:{}, conflictos:[], error:null };
+let SAPCAT = {"5":"LB","21":"UE","28":"LF","31":"LC","32":"LB","34":"LB","42":"LB","45":"LF","52":"LC","73":"UE","82":"LB","89":"LB","98":"LE","109":"LD","113":"LD","119":"LE","121":"FC","126":"LD","132":"LC","133":"LE","135":"LC","146":"UD","149":"LB","150":"LD","163":"LB","164":"LD","179":"UD","182":"UE","187":"LB","193":"LB","196":"LB","199":"LE","210":"LC","215":"LB","220":"LD","228":"LE","237":"UD","250":"LC","252":"LB","260":"LD","270":"LC","274":"LB","281":"LE","285":"UD","286":"UC","288":"LD","295":"LB","303":"LC","304":"LE","308":"UE","309":"LE","310":"LE","312":"LB","313":"LB","319":"LB","321":"LE","324":"LD","325":"LB","328":"LB","329":"LF","332":"LB","336":"LB","337":"LD","344":"LC","345":"FC","346":"LE","348":"LC","349":"LC","386":"LE","398":"LE","411":"LD","421":"LB","422":"LB","431":"LE","436":"LE","437":"LB","440":"LD","449":"LB","452":"LB","454":"LF","455":"LB","460":"LE","464":"LE","465":"LE","466":"LB","469":"LE","471":"LC","483":"LE","485":"LB","487":"UE","488":"LB","489":"LD","493":"LE","497":"LB","514":"LC","518":"LF","525":"LC","526":"LD","527":"LD","528":"LB","530":"LB","532":"LC","536":"LD","539":"LE","540":"LB","544":"LE","546":"LE","547":"LB","549":"LE","551":"LE","552":"LC","554":"LB","558":"LB","560":"LC","562":"LF","567":"LB","568":"LD","572":"LC","573":"LB","575":"LB","576":"LD","577":"LE","578":"LE","580":"LB","583":"LF","584":"LB","588":"LB","590":"LE","592":"LE","594":"LB","596":"LB","597":"LF","598":"LB","604":"LE","607":"LF","623":"LD","644":"LB","645":"LE","646":"LE","652":"LB","656":"LB","669":"FC","670":"LD","671":"FC","677":"LB","679":"AP","682":"LE","684":"LE","685":"LD","689":"LC","690":"LE","692":"LB","696":"LC","698":"FC","700":"LE","701":"LB","703":"LE","707":"LB","712":"LB","715":"LE","716":"LB","720":"LC","721":"LB","726":"LE","728":"LB","729":"LE","730":"LB","731":"LB","732":"LB","734":"LB","735":"LB","736":"LF","738":"LB","739":"LC","740":"LB","741":"LB","742":"LB","744":"LB","745":"LC","746":"LC","749":"LB","750":"LB","751":"LB","752":"LB","753":"LB","755":"LB","758":"LE","761":"LB","762":"LB","765":"LE","766":"LB","768":"LB","769":"LB","774":"LB","775":"LD","776":"LC","779":"LB","781":"LB","783":"LB","791":"LD","814":"UD","815":"UE","824":"UC","827":"UD","839":"LE","846":"LE","853":"UD","855":"LB","856":"LC","858":"LC","859":"LC","860":"LE","861":"LE","862":"LE","868":"LF","871":"LE","873":"LB","875":"LD","876":"LB","877":"LB","894":"UE","896":"LB","899":"LB","900":"UC","902":"UE","903":"UE","904":"FC","907":"FC","908":"UD","910":"UD","911":"UE","914":"LB","915":"UD","916":"LB","917":"LD","918":"LD","919":"LC","921":"UB","922":"LC","924":"LB","925":"LB","926":"LE","927":"UB","928":"UB","929":"UD","930":"UB","931":"LF","932":"UA","933":"LD","934":"LD","935":"LE","936":"LD","937":"LI","938":"FC","939":"LB","940":"UD","941":"LB","942":"LC","943":"LE","944":"LB","945":"LB","946":"LB","947":"LA","948":"LB","949":"UD","950":"LI","951":"UD","952":"LB","953":"LI","954":"LB","955":"LI","956":"LB","957":"LD","958":"LB","959":"LD","960":"LC","961":"LB","962":"LB","963":"LE","964":"LE","965":"LB","966":"LB","967":"UD","968":"LC","969":"LE","970":"UD","971":"UE","972":"LB","973":"LB","974":"UA","975":"LB","976":"LA","977":"LC","978":"LB","979":"UD","980":"UE","981":"LI","982":"LB","983":"LB","984":"LC","985":"LB","986":"LB","987":"LB","988":"LB","989":"LI","990":"LC","991":"LE","992":"LB","993":"LB","994":"LB","995":"LB","996":"LA","997":"LD","998":"LB","999":"LC","1000":"LB","1001":"LB","1002":"LB","1003":"LA","1004":"LB","1005":"LI","1006":"LB","1007":"LF","1008":"LB","1009":"LE","1010":"LB","1011":"UC","1012":"LA","1013":"LB","1014":"LC","1015":"LC","1016":"UD","1017":"UC","1018":"LB","1019":"LB","1020":"LE","1021":"LB","1022":"LB","1023":"LB","1024":"LC","1025":"LB","1026":"LB","1027":"LB","1028":"LB","1029":"LI","1030":"LB","1031":"LI","1032":"LB","1033":"LB","1034":"LB","1035":"LI","1036":"LA","1037":"LB","1038":"LC","1039":"UA","1040":"LD","1041":"LB","1042":"LB","1043":"LB","1044":"LA","1045":"LB","1046":"LI","1047":"LF","1048":"LB","1049":"LA","1050":"LI","1051":"LI","1052":"LI","1053":"LI","1054":"LB","1055":"UE","1056":"LE","1057":"UA","1058":"LE","1059":"LB","1060":"LB","1061":"LB","1062":"LD","1063":"UB","1064":"LB","1065":"LB","1066":"LA","1067":"LE","1068":"LD","1069":"UD","1070":"LA","1071":"LD","1072":"LI","1073":"UE","1074":"LB","1075":"UB","1076":"LB","1077":"LB","1078":"UD","1079":"UD","1080":"LE","1081":"UD","1082":"LC","1083":"LI","1084":"LB","1085":"LB","1086":"LI","1087":"LC","1088":"LE","1089":"LA","1090":"LB","1091":"LD","1092":"LB","1093":"LB","1094":"LB","1095":"LB","1096":"LI","1097":"LB","1098":"LA","1099":"LB","1100":"LD","1101":"LA","1102":"LI","1103":"LB","1104":"LF","1106":"UB","1107":"LC","1108":"LC","1109":"LC","1110":"LA","1111":"LI","1112":"LC","1113":"LB","1114":"LI","1115":"LI","1116":"LB","1117":"LA","1118":"LC","1119":"UB","1120":"LB","1121":"LE","1122":"LB","1123":"LE","1124":"LI","1125":"UD","1126":"LB","1127":"UB","1128":"LI","1129":"LB","1130":"LB","1131":"LI","1132":"LD","1133":"LD","1134":"LA","1135":"LB","1136":"LB","1137":"LB","1138":"LB","1139":"LB","1140":"LI","1141":"LC","1142":"LA","1143":"LC","1144":"LB","1145":"LD","1146":"UA","1147":"LC","1148":"UA","1149":"LI","1150":"LB","1151":"LB","1152":"LA","1153":"LI","1154":"LB","1155":"LB","1156":"UD","1157":"LB","1158":"LC","1159":"LB","1160":"LA","1161":"UC","1162":"UD","1163":"LA","1164":"LB","1165":"UC","1166":"LB","1167":"LB","1168":"LC","1169":"LB","1170":"LD","1171":"LB","1172":"LE","1173":"LB","1174":"LE","1175":"LA","1176":"LA","1177":"LA","1178":"LB","1179":"LA","1180":"LB","1181":"LC","1182":"LB","1183":"LA","1184":"LB","1185":"LA","1186":"LB","1187":"LB","1188":"LA","1189":"LD","1190":"LB","1191":"LA","1192":"LB","1193":"LB","1194":"LI","1195":"LC","1196":"UD","1197":"LI","1198":"LB","1199":"LC","1200":"LB","1201":"LB","1202":"LI","1203":"LB","1204":"LI","1205":"LB","1206":"LB","1207":"LB","1208":"LC","1209":"LB","1210":"LB","1211":"LA","1212":"LB","1213":"LB","1214":"UA","1215":"LB","1216":"LB","1217":"LB","1218":"LA","1219":"LC","1220":"LC","1221":"LB","1222":"LE","1223":"LB","1224":"LI","1225":"LI","1226":"LD","1227":"LB","1228":"LA","1229":"LB","1230":"LB","1231":"LB","1232":"LC","1233":"LB","1234":"LB","1235":"LB","1236":"LB","1237":"LB","1238":"LB","1239":"LA","1240":"UC","1241":"LA","1242":"LB","1243":"LD","1244":"LB","1245":"LB","1246":"LB","1247":"LB","1248":"LB","1249":"LC","1250":"LB","1251":"LB","1252":"LB","1253":"LA","1254":"LB","1255":"LB","1256":"LC","1257":"LA","1258":"LE","1259":"UB","1260":"LB","1261":"LA","1262":"UA","1263":"LA","1264":"UB","1265":"LB","1266":"UB","1267":"UD","1268":"UA","1269":"LB","1270":"LB","1271":"LE","1272":"LB","1273":"LA","1274":"LA","1275":"LB","1277":"LA","1278":"LB","1279":"LA","1280":"LB","1281":"LA","1282":"LB","1283":"LB","1284":"LC","1285":"LB","1286":"LB","1287":"LB","1288":"LB","1289":"LA","1290":"LA","1291":"LB","1292":"LB","1293":"UB","1294":"LB","1295":"LA","1296":"LB","1297":"LD","1298":"LI","1299":"LI","1300":"LB","1301":"LA","1302":"LI","1303":"LB","1304":"LA","1305":"LB","1306":"LD","1307":"LB","1308":"LB","1309":"LB","1310":"LA","1311":"LB","1312":"LB","1313":"LB","1314":"LC","1315":"LB","1316":"UB","1317":"LB","1318":"LI","1319":"LB","1320":"UC","1321":"LA","1322":"LA","1323":"UC","1324":"LB","1325":"LC","1326":"LA","1327":"LA","1328":"LA","1329":"LA","1330":"LB","1331":"LB","1332":"LB","1333":"LA","1334":"UB","1335":"UA","1336":"LB","1337":"LB","1338":"LB","1339":"LI","1340":"LA","1341":"LB","1342":"LB","1343":"LB","1344":"LB","1345":"LB","1346":"LB","1347":"UA","1348":"LB","1349":"LB","1350":"LA","1351":"LB","1352":"LA","1353":"LB","1354":"LA","1355":"UD","1356":"LA","1357":"LA","1358":"LB","1359":"LA","1360":"LB","1361":"LB","1362":"LB","1363":"LB","1364":"LB","1365":"LB","1366":"LC","1367":"LB","1368":"LC","1369":"LB","1370":"LI","1371":"LI","1372":"LA","1373":"LB","1374":"LC","1375":"LB","1376":"LB","1377":"UB","1378":"LI","1379":"LC","1380":"UE","1381":"LB","1382":"UC","1383":"LA","1384":"LB","1385":"LA","1386":"LB","1387":"LB","1388":"UB","1389":"LB","1390":"LC","1391":"LI","1392":"UC","1393":"UA","1394":"UD","1395":"UA","1396":"UB","1397":"LA","1398":"UB","1399":"LA","1400":"UA","1401":"UB","1402":"LB","1403":"LA","1404":"LC","1405":"UD","1406":"LC","1407":"UC","1408":"LB","1409":"LB","1410":"LB","1411":"LA","1412":"UD","1413":"LC","1414":"LB","1415":"LD","1416":"LC","1417":"UA","1418":"LI","1419":"LA","1420":"LA","1421":"UD","1422":"LB","1423":"UB","1424":"LI","1425":"UC","1426":"LA","1427":"UD","1428":"UB","1429":"UA","1430":"LC","1431":"UA","1432":"UA","1433":"LA","1434":"UA","1435":"LD","1436":"LD","1437":"LB","1438":"UB","1439":"LD","1440":"UC","1441":"LA","1442":"UB","1443":"LB","1444":"LC","1445":"LA","1446":"LC","1447":"LI","1448":"LD","1449":"UD","1450":"LA","1451":"LA","1452":"LB","1453":"LI","1454":"UA","1455":"LA","1456":"LA","1457":"LI","1458":"LB","1459":"LB","1460":"LB","1461":"LB","1462":"LC","1463":"LA","1464":"LB","1465":"LA","1466":"LA","1467":"LA","1468":"LA","1469":"LI","1470":"UB","1471":"LB","1472":"LI","1473":"LC","1474":"LA","1475":"LB","1476":"LA","1477":"LA","1478":"LI","1479":"LD","1480":"LA","1481":"UA","1482":"LC","1483":"UA","1484":"UC","1485":"LA","1486":"LA","1487":"LC","1488":"UA","1489":"LA","1490":"LI","1491":"LC","1492":"UA","1493":"LA","1494":"LA","1495":"LB","1496":"UA","1497":"LB","1498":"LB","1499":"LA","1500":"UB","1501":"LA","1502":"LA","1503":"LB","1504":"LA","1505":"UB","1506":"LB","1507":"LA","1508":"LA","1509":"LA","1510":"LB","1511":"UB","1512":"LI","1513":"LI","1514":"UB","1515":"LA","1516":"LI","1517":"LA","1518":"LA","1519":"LA","1520":"LA","1521":"LA","1522":"LB","1523":"LF","1524":"LA","1525":"UA","1526":"LD","1527":"UA","1528":"UC","1529":"LB","1530":"UB","1531":"UC","1532":"UA","1533":"LC","1534":"LI","1535":"LA","1536":"LI","1537":"UB","1538":"LC","1539":"UB","1540":"LD","1541":"LI","1542":"LI","1543":"LI","1544":"LI","1545":"LI","1546":"UB","1547":"UB","1548":"UB","1549":"LI","1551":"LI","1552":"LC","1553":"LI","1554":"LI","1555":"LI","1556":"UA","1557":"LA","1558":"LI","1559":"UD","1560":"LA","1561":"UB","1562":"LI","1563":"LI","1564":"LA","1565":"LI","1566":"LI","1567":"LA","1568":"LA","1569":"LI","1570":"LI","1571":"LI","1572":"LI","1573":"LC","1574":"LD","1575":"LI","1576":"LI","1577":"LI","1578":"LI","1579":"LI","5349":"LD","5356":"UD","5365":"FC","5366":"FC","5367":"LE","5369":"UC","5374":"LE","5376":"UD","5380":"UB","5385":"FC","5388":"LC","5389":"LC","5390":"FC","5391":"LD","5392":"LE","5393":"LE","5394":"LD","5395":"LD","5396":"LE","5397":"LE","5400":"LE","5402":"FC","5404":"UD","5405":"UC","5406":"UB","5407":"FC","5408":"UD","5409":"FC","5410":"FC","5411":"LD","5412":"FC","5413":"UD","5414":"FC","5415":"UB","5416":"FC","5417":"FC","5418":"LF","5419":"UA","5420":"UB","5421":"UD","5422":"FC","5423":"FC","5424":"LD","5425":"FC","5426":"FC","5427":"FC","5428":"UC","5429":"FC","5430":"FC","5431":"LC","5432":"FC","5433":"LC","5434":"FC","5435":"FC","5436":"UA","5437":"LA","5438":"FC","5439":"LA","5440":"FC","5441":"FC","5442":"LD","5443":"FC","5444":"LA","5445":"LD","5446":"UC","5447":"LA","5449":"UD","5450":"UE","5451":"UA","5452":"LB","5453":"LC","5454":"FC","5455":"UB","5456":"LF","5457":"FC","5458":"UE","5459":"UD","5460":"UE","5461":"FC","5463":"FC","5464":"FC","5465":"UE","5466":"FC","5467":"FC","5468":"FC","5469":"FC","5470":"FC","5471":"FC","5472":"FC","5473":"FC","5474":"FC","5475":"UE","5476":"FC","5477":"FC","5478":"FC","5479":"FC","5480":"FC","5481":"FC","5482":"FC","5483":"UD","5484":"FC","5485":"FC","5486":"FC","5487":"FC","5488":"FC","5489":"FC","9004":"FC","9006":"FC","9012":"UE","9013":"FC","9014":"FC","9016":"FC","9020":"FC","9022":"UD","9023":"UD","9024":"FC","9026":"FC","9027":"FC","9033":"FC","9034":"FC","9036":"UE","9038":"FC","9039":"FC","9040":"FC","9041":"FC","9042":"FC","9043":"FC","9044":"FC","9045":"FC","9046":"FC","9047":"FC","9048":"FC","9049":"FC","9050":"FC","9051":"FC","9052":"FC","9053":"FC","10001":"FC","10002":"FC","10003":"FC","10004":"FC","10005":"FC","10006":"FC"}; /* legajo -> Grupo profesional (GrProf), fecha clave 31.05.2026, sin datos personales */
+let FILES = [];
+let DATA = {};
+let RESULTS = {};
+let PERIODOS = [];
+
+/* ================= PERSISTENCIA ================= */
+async function persistCfg(){
+  try{ if(window.storage){ await window.storage.set('cfg_control_liq_v2', JSON.stringify(CONFIG)); await window.storage.set('sap_control_liq_v2', JSON.stringify(SAPCAT)); } }catch(e){}
+}
+async function restoreCfg(){
+  try{
+    if(window.storage){
+      const r = await window.storage.get('cfg_control_liq_v2');
+      if(r && r.value){ const c = JSON.parse(r.value); if(c.topes && c.tasas) CONFIG = Object.assign(CONFIG, c); }
+      const s = await window.storage.get('sap_control_liq_v2');
+      if(s && s.value){ const m = JSON.parse(s.value); if(Object.keys(m).length>50) SAPCAT = m; }
+    }
+  }catch(e){}
+}
+
+/* ================= UTILIDADES ================= */
+const $ = s => document.querySelector(s);
+const fmt$ = v => (v==null||v==='') ? "—" : v.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = v => (v==null) ? "—" : (v*100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+const MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+function perLabel(p){
+  if(!/^\d{6}$/.test(p)) return p;
+  const m = parseInt(p.slice(4),10);
+  return (MESES[m]||p.slice(4)) + " " + p.slice(0,4);
+}
+function prevPeriodo(p){
+  if(!/^\d{6}$/.test(p)) return null;
+  let y = +p.slice(0,4), m = +p.slice(4);
+  m--; if(m===0){ m=12; y--; }
+  return String(y) + String(m).padStart(2,'0');
+}
+function nextPeriodo(p){ let y=+p.slice(0,4), m=+p.slice(4); m++; if(m===13){m=1;y++;} return String(y)+String(m).padStart(2,'0'); }
+
+/* ================= TOPES REMOTOS (robot GitHub) ================= */
+async function fetchTopesRemotos(){
+  TOPESREMOTOS = { doc:null, aplicados:{}, conflictos:[], error:null };
+  const url = (CONFIG.topesUrl||'').trim();
+  if(!url) return;
+  try{
+    const sep = url.includes('?') ? '&' : '?';
+    const res = await fetch(url + sep + 't=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const doc = await res.json();
+    if(!doc || typeof doc.topes !== 'object') throw new Error('formato inválido');
+    TOPESREMOTOS.doc = doc;
+    for(const per in doc.topes){
+      const e = doc.topes[per];
+      if(!/^\d{6}$/.test(per) || typeof e.valor !== 'number') continue;
+      if(CONFIG.topes[per] == null){
+        CONFIG.topes[per] = e.valor;
+        TOPESREMOTOS.aplicados[per] = e.estado || 'confirmado';
+      } else if(Math.abs(CONFIG.topes[per] - e.valor) > 0.005){
+        TOPESREMOTOS.conflictos.push({per, local:CONFIG.topes[per], remoto:e.valor, estado:e.estado});
+      } else {
+        TOPESREMOTOS.aplicados[per] = e.estado || 'confirmado';
+      }
+    }
+    persistCfg();
+  }catch(err){ TOPESREMOTOS.error = String(err && err.message || err); }
+  compute(); renderAll();
+}
+
+/* ================= LECTOR/ESCRITOR XLSX PROPIO (sin librerías, offline) ================= */
+async function inflateRaw(bytes){
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function readZipEntries(buf){
+  const u = new Uint8Array(buf), dv = new DataView(buf);
+  let eo = -1;
+  for(let i=u.length-22;i>=0;i--){ if(dv.getUint32(i,true)===0x06054b50){ eo=i; break; } }
+  if(eo<0) throw new Error('ZIP inválido');
+  const cnt = dv.getUint16(eo+10,true), cdOff = dv.getUint32(eo+16,true);
+  const out = {}; let p = cdOff;
+  for(let n=0;n<cnt;n++){
+    if(dv.getUint32(p,true)!==0x02014b50) break;
+    const method=dv.getUint16(p+10,true), compSize=dv.getUint32(p+20,true);
+    const nameLen=dv.getUint16(p+28,true), extraLen=dv.getUint16(p+30,true), cmtLen=dv.getUint16(p+32,true);
+    const lho=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(u.slice(p+46,p+46+nameLen));
+    const lNameLen=dv.getUint16(lho+26,true), lExtraLen=dv.getUint16(lho+28,true);
+    const dataOff=lho+30+lNameLen+lExtraLen;
+    const comp=u.slice(dataOff,dataOff+compSize);
+    const data = method===0 ? comp : await inflateRaw(comp);
+    out[name]=new TextDecoder('utf-8').decode(data);
+    p+=46+nameLen+extraLen+cmtLen;
+  }
+  return out;
+}
+function xUnesc(s){return s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');}
+function parseShared(xml){
+  if(!xml) return [];
+  const out=[]; const re=/<si>([\s\S]*?)<\/si>/g; let m;
+  while((m=re.exec(xml))){ out.push(xUnesc([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]).join(''))); }
+  return out;
+}
+function xColIdx(ref){ let c=0; for(const ch of ref){ if(ch>='A'&&ch<='Z') c=c*26+(ch.charCodeAt(0)-64); else break; } return c-1; }
+function parseSheetXml(xml, shared){
+  const rows=[]; const rowRe=/<row[^>]*>([\s\S]*?)<\/row>/g; let rm;
+  while((rm=rowRe.exec(xml))){
+    const cells=[]; const cRe=/<c r="([A-Z]+)\d+"(?:[^>]*?\st="([^"]+)")?[^>]*?(?:\/>|>([\s\S]*?)<\/c>)/g; let cm;
+    while((cm=cRe.exec(rm[1]))){
+      const ci=xColIdx(cm[1]), t=cm[2], inner=cm[3]||''; let val=null;
+      if(t==='s'){ const v=/<v>([\s\S]*?)<\/v>/.exec(inner); if(v) val=shared[+v[1]]; }
+      else if(t==='inlineStr'){ const v=/<t[^>]*>([\s\S]*?)<\/t>/.exec(inner); if(v) val=xUnesc(v[1]); }
+      else { const v=/<v>([\s\S]*?)<\/v>/.exec(inner); if(v) val=isNaN(+v[1])?xUnesc(v[1]):+v[1]; }
+      cells[ci]=val;
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+async function readXlsx(buf){
+  const e=await readZipEntries(buf);
+  const shared=parseShared(e['xl/sharedStrings.xml']);
+  const sheets={};
+  for(const name in e){ const mm=/^xl\/worksheets\/(sheet\d+)\.xml$/.exec(name); if(mm) sheets[mm[1]]=parseSheetXml(e[name],shared); }
+  return sheets;
+}
+/* ---- Escritor XLSX (STORED, sin compresión) ---- */
+const _CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=_CRC[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function xEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function xColLetter(n){let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26;}return s;}
+function sheetToXml(aoa){
+  let r='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  aoa.forEach((row,ri)=>{ r+=`<row r="${ri+1}">`;
+    (row||[]).forEach((val,ci)=>{ if(val===null||val===undefined||val==='')return;
+      const ref=xColLetter(ci)+(ri+1);
+      if(typeof val==='number'&&isFinite(val)) r+=`<c r="${ref}"><v>${val}</v></c>`;
+      else r+=`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xEsc(val)}</t></is></c>`;
+    }); r+='</row>'; });
+  return r+'</sheetData></worksheet>';
+}
+function buildXlsx(sheets){
+  const enc=s=>new TextEncoder().encode(s), files={};
+  files['[Content_Types].xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>';
+  files['_rels/.rels']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  files['xl/workbook.xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>`<sheet name="${xEsc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+'</sheets></workbook>';
+  files['xl/_rels/workbook.xml.rels']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+'</Relationships>';
+  sheets.forEach((s,i)=>{ files[`xl/worksheets/sheet${i+1}.xml`]=sheetToXml(s.aoa); });
+  const parts=[], central=[], names=Object.keys(files); let offset=0;
+  for(const name of names){
+    const nameB=enc(name), dataB=enc(files[name]), crc=crc32(dataB);
+    const lh=new Uint8Array(30+nameB.length), dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true); dv.setUint16(4,20,true); dv.setUint32(14,crc,true);
+    dv.setUint32(18,dataB.length,true); dv.setUint32(22,dataB.length,true); dv.setUint16(26,nameB.length,true); lh.set(nameB,30);
+    parts.push(lh,dataB);
+    const ch=new Uint8Array(46+nameB.length), cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint32(16,crc,true); cv.setUint32(20,dataB.length,true); cv.setUint32(24,dataB.length,true);
+    cv.setUint16(28,nameB.length,true); cv.setUint32(42,offset,true); ch.set(nameB,46);
+    central.push(ch); offset+=lh.length+dataB.length;
+  }
+  const cdStart=offset; let cdSize=0; central.forEach(c=>cdSize+=c.length);
+  const eocd=new Uint8Array(22), ev=new DataView(eocd.buffer);
+  ev.setUint32(0,0x06054b50,true); ev.setUint16(8,names.length,true); ev.setUint16(10,names.length,true);
+  ev.setUint32(12,cdSize,true); ev.setUint32(16,cdStart,true);
+  const all=[...parts,...central,eocd]; let total=0; all.forEach(a=>total+=a.length);
+  const res=new Uint8Array(total); let q=0; all.forEach(a=>{res.set(a,q);q+=a.length;});
+  return res;
+}
+
+/* ================= PARSEO DE ARCHIVOS ================= */
+function parseWorkbook(sheets){
+  const rows = [];
+  for(const sn in sheets){
+    const arr = sheets[sn];
+    if(!arr || !arr.length) continue;
+    let hi = -1, col = null;
+    for(let i=0;i<Math.min(arr.length,12);i++){
+      const row = (arr[i]||[]).map(c => String(c==null?'':c).toLowerCase());
+      const iLeg = row.findIndex(c => c.includes('personal') || c.includes('legajo'));
+      const iCC  = row.findIndex(c => c.includes('cc-n') || c.includes('cc n') || c==='cc' || c.includes('concepto'));
+      const iImp = row.findIndex(c => c.includes('importe'));
+      const iPer = row.findIndex(c => c.includes('período') || c.includes('periodo'));
+      const iConv= row.findIndex(c => c.includes('conv'));
+      if(iLeg>=0 && iCC>=0 && iImp>=0 && iPer>=0){ hi=i; col={leg:iLeg,conv:iConv,per:iPer,cc:iCC,imp:iImp}; break; }
+    }
+    if(hi<0) continue;
+    for(let i=hi+1;i<arr.length;i++){
+      const r = arr[i]; if(!r) continue;
+      const leg = r[col.leg]; if(leg==null || leg==='') continue;
+      const per = String(r[col.per]==null?'':r[col.per]).trim();
+      const cc  = String(r[col.cc]==null?'':r[col.cc]).trim();
+      const imp = parseFloat(r[col.imp]);
+      const conv= col.conv>=0 ? String(r[col.conv]==null?'':r[col.conv]).trim() : '';
+      if(!cc || isNaN(imp)) continue;
+      rows.push({leg:String(leg).trim().replace(/\.0$/,''), conv, per, cc, imp});
+    }
+  }
+  return rows;
+}
+/* Export SAP de categorías: dos columnas, Nº pers. + GrProf */
+function parseSapCat(sheets){
+  const map = {};
+  for(const sn in sheets){
+    const arr = sheets[sn];
+    if(!arr || arr.length<2) continue;
+    const h = (arr[0]||[]).map(c=>String(c==null?'':c).toLowerCase());
+    const iLeg = h.findIndex(c=>c.includes('pers'));
+    const iGrp = h.findIndex(c=>c.includes('grprof')||c.includes('gr.prof')||c.includes('grupo prof'));
+    if(iLeg<0 || iGrp<0) continue;
+    for(let i=1;i<arr.length;i++){
+      const r = arr[i]; if(!r) continue;
+      let leg = r[iLeg], grp = r[iGrp];
+      if(leg==null || grp==null) continue;
+      leg = String(leg).trim().replace(/^0+/,'').replace(/\.0$/,'');
+      grp = String(grp).trim().toUpperCase();
+      if(leg && /^[A-Z]{1,3}$/.test(grp)) map[leg]=grp;
+    }
+  }
+  return map;
+}
+
+/* ================= RECONSTRUCCIÓN ================= */
+function rebuild(){
+  DATA = {};
+  for(const f of FILES){
+    const cnt = {};
+    for(const r of f.rows){ if(/^\d{6}$/.test(r.per)) cnt[r.per] = (cnt[r.per]||0)+1; }
+    const per = Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+    f.per = per || null;
+    if(!per) continue;
+    (DATA[per] ||= {});
+    for(const r of f.rows){
+      const e = (DATA[per][r.leg] ||= {conv:r.conv, cc:{}});
+      if(r.conv) e.conv = r.conv;
+      e.cc[r.cc] = (e.cc[r.cc]||0) + r.imp;
+    }
+  }
+  PERIODOS = Object.keys(DATA).sort();
+  compute();
+  renderAll();
+}
+
+/* ================= CÁLCULO DEL CONTROL ================= */
+function compute(){
+  RESULTS = {};
+  const T = CONFIG.tasas, TOL = CONFIG.tol;
+  for(const per of PERIODOS){
+    const tope = CONFIG.topes[per];
+    const escPer = CONFIG.escalas[per] || null;
+    const aumPct = (CONFIG.aumentos[per]!=null) ? CONFIG.aumentos[per]/100 : null;
+    const prev = prevPeriodo(per);
+    const prevData = prev && DATA[prev] ? DATA[prev] : null;
+    const out = [];
+    for(const leg of Object.keys(DATA[per]).sort((a,b)=>(+a)-(+b))){
+      const e = DATA[per][leg], cc = e.cc, conv = e.conv;
+      const totalRem = REM.reduce((s,k)=>s+(cc[k]||0),0);
+      const imp = cc['/4T2']||0, v321 = cc['/321']||0, v351 = cc['/351']||0, v361 = cc['/361']||0;
+      const c468 = cc['0468']||0, c210 = cc['0210']||0, c251 = cc['0251']||0;
+      const c40 = cc['0040']||0, c41 = cc['0041']||0, p306 = cc['0306']||0;
+      const hs = (cc['0308']||0)+(cc['0309']||0)+(cc['0310']||0);
+      /* --- Ganancias / MOPRE --- */
+      const lim = totalRem * T.gan/100;
+      const excGan = imp - lim;
+      const stGan = excGan>0.01 ? 'Supera 35%' : 'En regla';
+      let ex321=null, ex351=null, ex361=null, stMopre='SIN TOPE';
+      if(tope!=null){
+        ex321 = Math.max(0, v321 - tope*T.sijp/100);
+        ex351 = Math.max(0, v351 - tope*T.inssjp/100);
+        ex361 = Math.max(0, v361 - tope*T.osoc/100);
+        stMopre = (ex321>0.01||ex351>0.01||ex361>0.01) ? 'Excede Tope' : 'En regla';
+      }
+      /* --- Escala: básico / presentismo / antigüedad / 0041 --- */
+      const grp = SAPCAT[leg] || '';
+      const meta = ESC_META[grp] || null;
+      const esc = (escPer && escPer[grp]) ? escPer[grp] : null;
+      const bLiq = cc['0001']||0;
+      let cat = conv==='FC' ? 'Fuera de convenio' : (meta ? meta.cat : (grp? grp : '—'));
+      let bEsc=null, difB=null, stB;
+      if(conv==='FC') stB='FC (sin escala)';
+      else if(!grp) stB='Sin categoría SAP';
+      else if(!esc) stB = escPer ? 'Sin escala — revisar' : 'Sin escala del período';
+      else {
+        bEsc = esc.b; difB = bLiq - bEsc;
+        stB = Math.abs(difB)<=TOL.basico ? 'Coincide' : (bLiq<bEsc ? '⚠ Menor (¿proporcional?)' : '⚠ Mayor a escala');
+      }
+      let pEsp=null, stP;
+      if(conv!=='FA') stP='No aplica (AY/FC)';
+      else if(!esc || esc.p==null) stP = esc? 'Sin escala' : (grp? 'Sin escala del período':'Sin categoría SAP');
+      else if(stB!=='Coincide') stP='No verificable';
+      else { pEsp = esc.p; stP = Math.abs(p306-pEsp)<=TOL.basico ? 'Coincide' : (p306<0.01 ? '⚠ No cobra (¿ausencias?)' : '⚠ Difiere del 12%'); }
+      let anios=null, aniosR=null, stAnt;
+      const tasaAnt = conv==='FA' ? T.antFA/100 : (conv==='AY' ? T.antAY/100 : null);
+      if(conv==='FC') stAnt='No aplica';
+      else if(c40===0) stAnt='Sin antigüedad (0)';
+      else if(stB!=='Coincide' || !esc) stAnt='No verificable (básico)';
+      else {
+        anios = c40/(bEsc*tasaAnt); aniosR = Math.round(anios);
+        stAnt = Math.abs(anios-aniosR)<=TOL.antig ? 'OK (años enteros)' : '⚠ No entera — revisar';
+      }
+      let adicEsp=null, st41;
+      if(conv==='FC') st41='No aplica';
+      else if(c40===0){ adicEsp=0; st41 = Math.abs(c41)<=TOL.basico ? 'OK' : '⚠ Tramo incorrecto'; }
+      else if(aniosR==null || !esc) st41='No verificable';
+      else {
+        adicEsp = aniosR>=25 ? esc.a2 : (aniosR>=10 ? esc.a1 : 0);
+        st41 = Math.abs(c41-adicEsp)<=TOL.basico ? 'OK' : '⚠ Tramo incorrecto';
+      }
+      /* --- Auditoría convenios --- */
+      let st468 = 'OK';
+      if(c468>0.01 && conv!=='FA') st468 = '⚠ 0468 fuera de FATLYF';
+      else if(conv==='FA' && totalRem>0.01 && c468<=0.01) st468 = '⚠ FATLYF sin 0468';
+      const st210 = (c210>0.01 && conv!=='AY') ? '⚠ Revisar (0210 fuera de APUAYE)' : 'OK';
+      const stHs = (conv==='AY' && hs>0.01) ? '⚠ Hs. extras en APUAYE' : 'OK';
+      /* --- 0251 vs paritaria --- */
+      let c251prev=null, var251=null, pct251=null, st251='Sin mes anterior';
+      if(prevData){
+        c251prev = prevData[leg] ? (prevData[leg].cc['0251']||0) : 0;
+        var251 = c251 - c251prev;
+        if(c251prev<=0.01 && c251<=0.01) st251='Sin dato';
+        else if(Math.abs(var251)<=TOL.c251) st251='Sin cambios';
+        else if(c251prev<=0.01) st251='⚠ Nuevo — revisar';
+        else {
+          pct251 = var251/c251prev;
+          if(aumPct==null) st251='Sin % paritaria';
+          else st251 = Math.abs(pct251-aumPct)<=TOL.porc/100 ? 'OK (= paritaria)' : '⚠ % distinto a paritaria';
+        }
+      }
+      /* --- Aumento de sueldo --- */
+      const concepto = conv==='FC' ? '0003' : '0001';
+      const sAct = cc[concepto]||0;
+      let sPrev=null, aumReal=null, stAum='Sin mes anterior';
+      if(prevData){
+        sPrev = prevData[leg] ? (prevData[leg].cc[concepto]||0) : 0;
+        if(sPrev<=0) stAum='Alta nueva (sin mes ant.)';
+        else if(aumPct==null) stAum='Sin % paritaria';
+        else {
+          aumReal = sAct/sPrev - 1;
+          const dif = aumReal - aumPct;
+          if(Math.abs(dif)<=TOL.porc/100) stAum='OK (= paritaria)';
+          else if(dif>0) stAum='Mayor (¿ascenso/ingreso parcial?)';
+          else stAum = conv==='FC' ? '⚠ FC: aumento menor a paritaria' : '⚠ Menor a paritaria — revisar';
+        }
+      }
+      out.push({leg,conv,grp,cat,totalRem,lim,imp,excGan,stGan,tope,v321,ex321,v351,ex351,v361,ex361,stMopre,
+                bLiq,bEsc,difB,stB,p306,pEsp,stP,c40,anios,aniosR,stAnt,c41,adicEsp,st41,
+                c468,st468,c210,hs,st210,stHs,c251prev,c251,var251,pct251,st251,
+                concepto,sPrev,sAct,aumReal,aumPct,stAum});
+    }
+    RESULTS[per] = out;
+  }
+}
+
+/* ================= RENDER ================= */
+function stCls(s){
+  if(s==null) return 'mut';
+  if(s==='Supera 35%'||s==='Excede Tope') return 'bad';
+  if(s.startsWith('⚠')){
+    if(s.includes('Mayor a escala')||s.includes('Difiere')||s.includes('No entera')||s.includes('Tramo incorrecto')||s.includes('Hs. extras en APUAYE')||s.includes('0468 fuera')) return 'bad';
+    return 'warn';
+  }
+  if(s.startsWith('OK')||s==='Coincide'||s==='En regla'||s==='Sin cambios') return 'ok';
+  if(s.startsWith('Mayor (')) return 'warn';
+  return 'mut';
+}
+function stTag(s){ return `<span class="st ${stCls(s)}">${s}</span>`; }
+
+function counts(per){
+  const rs = RESULTS[per]||[];
+  const c = (f)=>rs.filter(f).length;
+  return {
+    legajos: rs.length,
+    sinTope: rs.length && rs[0].tope==null,
+    gan: c(r=>r.stGan==='Supera 35%'),
+    mopre: c(r=>r.stMopre==='Excede Tope'),
+    bMayor: c(r=>r.stB==='⚠ Mayor a escala'),
+    bMenor: c(r=>r.stB==='⚠ Menor (¿proporcional?)'),
+    bSin: c(r=>r.stB==='Sin escala — revisar'||r.stB==='Sin categoría SAP'||r.stB==='Sin escala del período'),
+    presNo: c(r=>r.stP==='⚠ No cobra (¿ausencias?)'),
+    presDif: c(r=>r.stP==='⚠ Difiere del 12%'),
+    antNE: c(r=>r.stAnt==='⚠ No entera — revisar'),
+    tramo: c(r=>r.st41==='⚠ Tramo incorrecto'),
+    f468fuera: c(r=>r.st468==='⚠ 0468 fuera de FATLYF'),
+    f468falta: c(r=>r.st468==='⚠ FATLYF sin 0468'),
+    c210: c(r=>r.st210.startsWith('⚠')),
+    hsAY: c(r=>r.stHs.startsWith('⚠')),
+    c251d: c(r=>r.st251==='⚠ % distinto a paritaria'),
+    c251n: c(r=>r.st251==='⚠ Nuevo — revisar'),
+    aumFC: c(r=>r.stAum==='⚠ FC: aumento menor a paritaria'),
+    aumConv: c(r=>r.stAum==='⚠ Menor a paritaria — revisar')
+  };
+}
+
+function renderAll(){
+  for(const id of ['selPeriodo','gPeriodo','ePeriodo','aPeriodo','uPeriodo']){
+    const sel = $('#'+id); const cur = sel.value;
+    sel.innerHTML = PERIODOS.map(p=>`<option value="${p}">${perLabel(p)} (${p})</option>`).join('');
+    if(PERIODOS.includes(cur)) sel.value = cur; else sel.value = PERIODOS[PERIODOS.length-1]||'';
+  }
+  $('#resumenBar').style.display = PERIODOS.length? 'flex':'none';
+  renderBanners(); renderResumen(); renderGan(); renderEsc(); renderAud(); renderAum(); renderNavPills(); renderFiles(); renderSapInfo();
+}
+
+function renderBanners(){
+  const b = $('#banners'); b.innerHTML='';
+  const faltanT = PERIODOS.filter(p=>CONFIG.topes[p]==null);
+  const faltanE = PERIODOS.filter(p=>!CONFIG.escalas[p]);
+  const faltanA = PERIODOS.filter(p=>CONFIG.aumentos[p]==null);
+  if(faltanT.length) b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>Falta el tope MOPRE de: ${faltanT.map(perLabel).join(', ')}.</b> Cargalo en <a class="goParams">Parámetros</a>.</span></div>`);
+  if(faltanE.length) b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>Falta la escala salarial de: ${faltanE.map(perLabel).join(', ')}.</b> Los controles de básico, presentismo y antigüedad quedan pendientes. Cargala en <a class="goParams">Parámetros</a>.</span></div>`);
+  if(faltanA.length) b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>Falta el % de paritaria de: ${faltanA.map(perLabel).join(', ')}.</b> Los controles de 0251 y aumentos quedan pendientes. Cargalo en <a class="goParams">Parámetros</a>.</span></div>`);
+  /* --- avisos del sistema de topes automáticos --- */
+  const R = TOPESREMOTOS;
+  if((CONFIG.topesUrl||'').trim()){
+    if(R.error){
+      b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>No se pudo actualizar el tope MOPRE automáticamente</b> (${R.error}). Si estás sin conexión es normal; si no, revisá la URL en <a class="goParams">Parámetros</a> y cargá el tope a mano si hace falta.</span></div>`);
+    } else if(R.doc){
+      const estAplic = PERIODOS.filter(p=>R.aplicados[p]==='estimado');
+      if(estAplic.length) b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>Tope MOPRE ESTIMADO por movilidad (IPC) para: ${estAplic.map(perLabel).join(', ')}.</b> Aún sin confirmación oficial de ANSES; el robot lo confirmará solo cuando salga la resolución. Revisá el resultado del control MOPRE de ese mes con esa salvedad.</span></div>`);
+      const confAplic = PERIODOS.filter(p=>R.aplicados[p] && R.aplicados[p]!=='estimado');
+      if(confAplic.length) b.insertAdjacentHTML('beforeend', `<div class="banner ok"><span>✓</span><span><b>Tope MOPRE actualizado automáticamente (fuente oficial) para: ${confAplic.map(perLabel).join(', ')}.</b></span></div>`);
+      if(R.conflictos.length){
+        const c = R.conflictos[0];
+        b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>El tope cargado a mano de ${perLabel(c.per)} (${c.local.toLocaleString('es-AR',{minimumFractionDigits:2})}) difiere del publicado por el robot (${c.remoto.toLocaleString('es-AR',{minimumFractionDigits:2})}).</b> Se respeta tu valor manual; verificá cuál es el correcto.</span></div>`);
+      }
+      if(Array.isArray(R.doc.alertas) && R.doc.alertas.length){
+        b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>Aviso del robot de topes:</b> ${R.doc.alertas[0]}</span></div>`);
+      }
+      if(R.doc.actualizado){
+        const dias = (Date.now() - new Date(R.doc.actualizado).getTime())/86400000;
+        if(dias > 45) b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>El robot de topes no corre hace ${Math.round(dias)} días.</b> Verificá en GitHub que el workflow siga activo, y cargá el tope a mano mientras tanto.</span></div>`);
+      }
+    }
+  }
+  const per = PERIODOS[PERIODOS.length-1];
+  if(per){
+    const sinCat = (RESULTS[per]||[]).filter(r=>r.conv!=='FC' && !r.grp).length;
+    if(sinCat) b.insertAdjacentHTML('beforeend', `<div class="banner warn"><span>⚠</span><span><b>${sinCat} legajos de convenio sin categoría SAP en ${perLabel(per)}.</b> Subí un export actualizado de SAP (Nº pers. + GrProf) en Parámetros o arrastralo a la zona de carga.</span></div>`);
+  }
+  b.querySelectorAll('.goParams').forEach(a=>a.onclick=()=>switchView('parametros'));
+}
+
+function renderResumen(){
+  const per = $('#selPeriodo').value;
+  const st = $('#stats'), cd = $('#cards');
+  if(!per){ st.style.display='none'; cd.innerHTML=''; return; }
+  const c = counts(per);
+  st.style.display='flex';
+  st.innerHTML = `
+    <div class="stat"><div class="sv">${c.legajos}</div><div class="sl">Legajos</div></div>
+    <div class="stat"><div class="sv">${perLabel(per)}</div><div class="sl">Período</div></div>
+    <div class="stat"><div class="sv">${CONFIG.topes[per]!=null? '$ '+fmt$(CONFIG.topes[per]) : '—'}</div><div class="sl">Tope MOPRE</div></div>
+    <div class="stat"><div class="sv">${CONFIG.aumentos[per]!=null? CONFIG.aumentos[per].toLocaleString('es-AR')+'%' : '—'}</div><div class="sl">Paritaria</div></div>
+    <div class="stat"><div class="sv">${CONFIG.escalas[per]? 'Sí':'No'}</div><div class="sl">Escala cargada</div></div>`;
+  const card = (t,v,cls,d,view) => `<div class="kcard" tabindex="0" data-go="${view}"><div class="kt">${t}</div><div class="kv ${(typeof v==='number'&&v>0)?cls:'ok'}">${v}</div><div class="kd">${d}</div></div>`;
+  cd.innerHTML =
+    card('Ganancias — Supera 35%', c.gan,'bad','Retención /4T2 mayor al límite del Total Remunerativo.','ganancias') +
+    card('MOPRE — Excede tope', c.sinTope? '—' : c.mopre,'bad', c.sinTope? 'Cargá el tope del período en Parámetros.':'Aportes /321 /351 /361 sobre el tope.','ganancias') +
+    card('Básico mayor a escala', c.bMayor,'bad','El 0001 supera el básico oficial de su categoría.','escala') +
+    card('Básico menor (¿proporcional?)', c.bMenor,'warn','Suele ser ingreso a mitad de mes; confirmar.','escala') +
+    card('Sin categoría / sin escala', c.bSin,'warn','Legajos que no se pudieron cruzar con la escala.','escala') +
+    card('Presentismo: no cobra (FA)', c.presNo,'warn','0306 en cero; confirmar ausencias con RRHH.','escala') +
+    card('Presentismo difiere (FA)', c.presDif,'bad','0306 distinto del 12% del básico de escala.','escala') +
+    card('Antigüedad no entera', c.antNE,'bad','El 0040 no da años enteros: básico o antigüedad mal.','escala') +
+    card('0041: tramo incorrecto', c.tramo,'bad','Adicional por antigüedad distinto del tramo (≥10 / ≥25).','escala') +
+    card('0468 fuera de FATLYF', c.f468fuera,'bad','No remunerativo 0468 en convenio que no es FA.','auditoria') +
+    card('FATLYF sin 0468', c.f468falta,'warn','Legajo FA activo al que le falta el 0468.','auditoria') +
+    card('0210 fuera de APUAYE', c.c210,'warn','Serv. Extraordinario (hora extra AY) en otro convenio.','auditoria') +
+    card('Hs. extras en APUAYE', c.hsAY,'bad','AY con 0308/0309/0310: no corresponde (usan 0210).','auditoria') +
+    card('0251: % distinto a paritaria', c.c251d,'warn','A Cta. Fut. Aumentos no subió el % del período.','auditoria') +
+    card('0251: nuevo', c.c251n,'warn','Apareció 0251 sin valor el mes anterior.','auditoria') +
+    card('Aumento FC menor a paritaria', c.aumFC,'warn','Fuera de convenio con aumento menor al % del período.','aumentos') +
+    card('Aumento menor (convenio)', c.aumConv,'warn','FA/AY con aumento menor a paritaria; revisar.','aumentos');
+  cd.querySelectorAll('.kcard').forEach(k=>{
+    k.onclick = ()=>switchView(k.dataset.go);
+    k.onkeydown = e=>{ if(e.key==='Enter') switchView(k.dataset.go); };
+  });
+}
+
+function renderNavPills(){
+  const per = $('#selPeriodo').value;
+  const defs = [['ganancias', c=>c.gan+(c.sinTope?0:c.mopre)], ['escala', c=>c.bMayor+c.bMenor+c.bSin+c.presNo+c.presDif+c.antNE+c.tramo],
+                ['auditoria', c=>c.f468fuera+c.f468falta+c.c210+c.hsAY+c.c251d+c.c251n], ['aumentos', c=>c.aumFC+c.aumConv]];
+  for(const [v] of defs){ const b=document.querySelector(`nav button[data-v=${v}]`); b.querySelectorAll('.pill').forEach(p=>p.remove()); }
+  if(!per) return;
+  const c = counts(per);
+  for(const [v,f] of defs){
+    const n = f(c);
+    document.querySelector(`nav button[data-v=${v}]`).insertAdjacentHTML('beforeend', `<span class="pill ${n?'':'zero'}">${n}</span>`);
+  }
+}
+
+function renderGan(){
+  const per = $('#gPeriodo').value, tb = $('#gTable tbody'), q = $('#gBuscar').value.trim();
+  const conv = $('#gConv').value, solo = $('#gSolo').checked;
+  const rs = (RESULTS[per]||[]).filter(r =>
+    (!q || r.leg.includes(q)) && (!conv || r.conv===conv) &&
+    (!solo || r.stGan!=='En regla' || (r.stMopre!=='En regla' && r.stMopre!=='SIN TOPE')));
+  $('#gEmpty').style.display = rs.length? 'none':'block';
+  $('#gCount').textContent = rs.length? rs.length+' legajos' : '';
+  tb.innerHTML = rs.map(r=>`<tr>
+    <td class="ctr" style="font-family:var(--mono)">${r.leg}</td><td class="ctr">${r.conv}</td>
+    <td class="num">${fmt$(r.totalRem)}</td><td class="num">${fmt$(r.lim)}</td><td class="num">${fmt$(r.imp)}</td>
+    <td class="num" style="color:${r.excGan>0.01?'var(--bad-tx)':'var(--ink-faint)'}">${fmt$(r.excGan)}</td>
+    <td class="ctr">${stTag(r.stGan)}</td>
+    <td class="num">${r.tope!=null?fmt$(r.tope):'—'}</td>
+    <td class="num">${fmt$(r.v321)}</td><td class="num">${r.ex321!=null?fmt$(r.ex321):'—'}</td>
+    <td class="num">${fmt$(r.v351)}</td><td class="num">${r.ex351!=null?fmt$(r.ex351):'—'}</td>
+    <td class="num">${fmt$(r.v361)}</td><td class="num">${r.ex361!=null?fmt$(r.ex361):'—'}</td>
+    <td class="ctr">${stTag(r.stMopre)}</td></tr>`).join('');
+}
+
+function renderEsc(){
+  const per = $('#ePeriodo').value, tb = $('#eTable tbody'), q = $('#eBuscar').value.trim();
+  const conv = $('#eConv').value, solo = $('#eSolo').checked;
+  const alerta = r => r.stB.startsWith('⚠')||r.stB.startsWith('Sin')||r.stP.startsWith('⚠')||r.stAnt.startsWith('⚠')||r.st41.startsWith('⚠');
+  const rs = (RESULTS[per]||[]).filter(r =>
+    (!q || r.leg.includes(q)) && (!conv || r.conv===conv) && (!solo || alerta(r)));
+  $('#eEmpty').style.display = rs.length? 'none':'block';
+  $('#eCount').textContent = rs.length? rs.length+' legajos' : '';
+  tb.innerHTML = rs.map(r=>`<tr>
+    <td class="ctr" style="font-family:var(--mono)">${r.leg}</td><td class="ctr">${r.conv}</td>
+    <td class="ctr" style="font-family:var(--mono)">${r.grp||'—'}</td><td class="ctr">${r.cat}</td>
+    <td class="num">${fmt$(r.bLiq)}</td><td class="num">${r.bEsc!=null?fmt$(r.bEsc):'—'}</td>
+    <td class="num" style="color:${r.difB&&Math.abs(r.difB)>CONFIG.tol.basico?'var(--bad-tx)':'var(--ink-faint)'}">${r.difB!=null?fmt$(r.difB):'—'}</td>
+    <td class="ctr">${stTag(r.stB)}</td>
+    <td class="num">${fmt$(r.p306)}</td><td class="num">${r.pEsp!=null?fmt$(r.pEsp):'—'}</td><td class="ctr">${stTag(r.stP)}</td>
+    <td class="num">${fmt$(r.c40)}</td><td class="num">${r.anios!=null? r.anios.toLocaleString('es-AR',{maximumFractionDigits:2}) : '—'}</td><td class="ctr">${stTag(r.stAnt)}</td>
+    <td class="num">${fmt$(r.c41)}</td><td class="num">${r.adicEsp!=null?fmt$(r.adicEsp):'—'}</td><td class="ctr">${stTag(r.st41)}</td></tr>`).join('');
+}
+
+function renderAud(){
+  const per = $('#aPeriodo').value, tb = $('#aTable tbody'), q = $('#aBuscar').value.trim();
+  const solo = $('#aSolo').checked;
+  const rs = (RESULTS[per]||[]).filter(r =>
+    (!q || r.leg.includes(q)) &&
+    (!solo || r.st468!=='OK' || r.st210!=='OK' || r.stHs!=='OK' || r.st251.startsWith('⚠')));
+  $('#aEmpty').style.display = rs.length? 'none':'block';
+  $('#aCount').textContent = rs.length? rs.length+' legajos' : '';
+  tb.innerHTML = rs.map(r=>`<tr>
+    <td class="ctr" style="font-family:var(--mono)">${r.leg}</td><td class="ctr">${r.conv}</td>
+    <td class="num">${fmt$(r.c468)}</td><td class="ctr">${stTag(r.st468)}</td>
+    <td class="num">${fmt$(r.c210)}</td><td class="ctr">${r.hs>0.01? 'Sí':'No'}</td><td class="ctr">${stTag(r.st210)}</td>
+    <td class="num">${fmt$(r.hs)}</td><td class="ctr">${stTag(r.stHs)}</td>
+    <td class="num">${r.c251prev!=null?fmt$(r.c251prev):'—'}</td><td class="num">${fmt$(r.c251)}</td>
+    <td class="num">${r.var251!=null?fmt$(r.var251):'—'}</td>
+    <td class="num">${r.pct251!=null? fmtP(r.pct251) : '—'}</td>
+    <td class="ctr">${stTag(r.st251)}</td></tr>`).join('');
+}
+
+function renderAum(){
+  const per = $('#uPeriodo').value, tb = $('#uTable tbody'), q = $('#uBuscar').value.trim();
+  const conv = $('#uConv').value, solo = $('#uSolo').checked;
+  const rs = (RESULTS[per]||[]).filter(r =>
+    (!q || r.leg.includes(q)) && (!conv || r.conv===conv) && (!solo || r.stAum.startsWith('⚠')));
+  $('#uEmpty').style.display = rs.length? 'none':'block';
+  $('#uCount').textContent = rs.length? rs.length+' legajos' : '';
+  tb.innerHTML = rs.map(r=>`<tr>
+    <td class="ctr" style="font-family:var(--mono)">${r.leg}</td><td class="ctr">${r.conv}</td>
+    <td class="ctr" style="font-family:var(--mono)">${r.grp||'—'}</td><td class="ctr" style="font-family:var(--mono)">${r.concepto}</td>
+    <td class="num">${r.sPrev!=null?fmt$(r.sPrev):'—'}</td><td class="num">${fmt$(r.sAct)}</td>
+    <td class="num">${r.aumReal!=null? fmtP(r.aumReal):'—'}</td>
+    <td class="num">${r.aumPct!=null? fmtP(r.aumPct):'—'}</td>
+    <td class="ctr">${stTag(r.stAum)}</td></tr>`).join('');
+}
+
+function renderFiles(){
+  $('#filelist').innerHTML = FILES.map((f,i)=>
+    `<span class="fchip"><b>${f.name}</b><span class="n">${f.per? perLabel(f.per) : 'período no detectado'} · ${f.rows.length.toLocaleString('es-AR')} registros</span><button title="Quitar" data-i="${i}">✕</button></span>`).join('');
+  $('#filelist').querySelectorAll('button').forEach(b=>b.onclick=()=>{ FILES.splice(+b.dataset.i,1); rebuild(); });
+}
+function renderSapInfo(){
+  const n = Object.keys(SAPCAT).length;
+  $('#sapInfo').innerHTML = `Cargadas: <b>${n.toLocaleString('es-AR')}</b> categorías (legajo → GrProf, sin datos personales). Fecha clave del set incluido: 31.05.2026. Para actualizar, subí el export de la Ad Hoc Query de SAP con columnas "Nº pers." y "GrProf" — reemplaza todo el set.`;
+}
+
+/* ================= PARÁMETROS ================= */
+function renderParams(){
+  /* topes */
+  const tb = $('#topesTable tbody');
+  const pers = Object.keys(CONFIG.topes).sort();
+  tb.innerHTML = pers.map(p=>`<tr>
+    <td style="width:38%"><input type="text" value="${p}" data-per="${p}" class="tp-per" maxlength="6"></td>
+    <td><input type="number" step="0.01" value="${CONFIG.topes[p]}" data-per="${p}" class="tp-val"></td>
+    <td><button class="del" data-per="${p}" title="Eliminar">✕</button></td></tr>`).join('');
+  tb.querySelectorAll('.tp-val').forEach(i=>i.onchange = ()=>{ CONFIG.topes[i.dataset.per]=parseFloat(i.value)||0; saveAndRefresh('topeSaved'); });
+  tb.querySelectorAll('.tp-per').forEach(i=>i.onchange = ()=>{
+    const v = CONFIG.topes[i.dataset.per]; delete CONFIG.topes[i.dataset.per];
+    if(/^\d{6}$/.test(i.value.trim())) CONFIG.topes[i.value.trim()] = v;
+    renderParams(); saveAndRefresh('topeSaved');
+  });
+  tb.querySelectorAll('.del').forEach(b=>b.onclick = ()=>{ delete CONFIG.topes[b.dataset.per]; renderParams(); saveAndRefresh('topeSaved'); });
+  /* aumentos paritaria */
+  const ab = $('#aumTable tbody');
+  const apers = Object.keys(CONFIG.aumentos).sort();
+  ab.innerHTML = apers.map(p=>`<tr>
+    <td style="width:38%"><input type="text" value="${p}" data-per="${p}" class="au-per" maxlength="6"></td>
+    <td><input type="number" step="0.1" value="${CONFIG.aumentos[p]}" data-per="${p}" class="au-val"></td>
+    <td><button class="del" data-per="${p}" title="Eliminar">✕</button></td></tr>`).join('');
+  ab.querySelectorAll('.au-val').forEach(i=>i.onchange = ()=>{ CONFIG.aumentos[i.dataset.per]=parseFloat(i.value)||0; saveAndRefresh('aumSaved'); });
+  ab.querySelectorAll('.au-per').forEach(i=>i.onchange = ()=>{
+    const v = CONFIG.aumentos[i.dataset.per]; delete CONFIG.aumentos[i.dataset.per];
+    if(/^\d{6}$/.test(i.value.trim())) CONFIG.aumentos[i.value.trim()] = v;
+    renderParams(); saveAndRefresh('aumSaved');
+  });
+  ab.querySelectorAll('.del').forEach(b=>b.onclick = ()=>{ delete CONFIG.aumentos[b.dataset.per]; renderParams(); saveAndRefresh('aumSaved'); });
+  /* URL del robot de topes */
+  const tu = $('#topesUrl');
+  tu.value = CONFIG.topesUrl || '';
+  tu.onchange = ()=>{ CONFIG.topesUrl = tu.value.trim(); persistCfg(); };
+  $('#btnTopesFetch').onclick = async ()=>{ CONFIG.topesUrl = tu.value.trim(); persistCfg(); await fetchTopesRemotos(); renderParams(); switchView('parametros'); };
+  const st = $('#topesStatus'); const R = TOPESREMOTOS;
+  if(!(CONFIG.topesUrl||'').trim()) st.textContent = 'Sin URL configurada: los topes se cargan a mano.';
+  else if(R.error) st.textContent = '✗ Última lectura falló: ' + R.error;
+  else if(R.doc){
+    const n = Object.keys(R.doc.topes||{}).length;
+    const est = Object.values(R.doc.topes||{}).filter(t=>t.estado==='estimado').length;
+    st.textContent = `✓ Leído correctamente: ${n} períodos (${n-est} confirmados, ${est} estimados). Última corrida del robot: ${R.doc.actualizado ? new Date(R.doc.actualizado).toLocaleDateString('es-AR') : '—'}.`;
+  } else st.textContent = 'Todavía no se leyó (se intenta al abrir la app).';
+  /* tasas */
+  $('#rGan').value = CONFIG.tasas.gan; $('#rSijp').value = CONFIG.tasas.sijp;
+  $('#rInssjp').value = CONFIG.tasas.inssjp; $('#rOsoc').value = CONFIG.tasas.osoc;
+  $('#rAntFA').value = CONFIG.tasas.antFA; $('#rAntAY').value = CONFIG.tasas.antAY;
+  renderEscEditor();
+  renderSapInfo();
+}
+
+function renderEscEditor(){
+  const sel = $('#escPeriodo'); const cur = sel.value;
+  const pers = Object.keys(CONFIG.escalas).sort();
+  sel.innerHTML = pers.map(p=>`<option value="${p}">${perLabel(p)} (${p})</option>`).join('');
+  if(pers.includes(cur)) sel.value = cur; else sel.value = pers[pers.length-1]||'';
+  const per = sel.value;
+  const tb = $('#escTable tbody');
+  if(!per){ tb.innerHTML=''; return; }
+  const esc = CONFIG.escalas[per];
+  tb.innerHTML = ESC_ORDEN.map(k=>{
+    const e = esc[k] || {b:'',p:null,a1:'',a2:''};
+    const m = ESC_META[k];
+    return `<tr>
+      <td class="ctr" style="font-family:var(--mono);font-weight:700">${k}</td>
+      <td class="ctr">${m.conv}</td><td>${m.cat}</td>
+      <td><input type="number" step="0.01" class="esc-in" data-k="${k}" data-f="b" value="${e.b??''}"></td>
+      <td><input type="number" step="0.01" class="esc-in" data-k="${k}" data-f="p" value="${e.p??''}" ${m.conv==='AY'?'placeholder="— (AY sin presentismo)"':''}></td>
+      <td><input type="number" step="0.01" class="esc-in" data-k="${k}" data-f="a1" value="${e.a1??''}"></td>
+      <td><input type="number" step="0.01" class="esc-in" data-k="${k}" data-f="a2" value="${e.a2??''}"></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('.esc-in').forEach(i=>i.onchange = ()=>{
+    const k=i.dataset.k, f=i.dataset.f;
+    (CONFIG.escalas[per][k] ||= {b:0,p:null,a1:0,a2:0});
+    CONFIG.escalas[per][k][f] = i.value==='' ? null : (parseFloat(i.value)||0);
+    saveAndRefresh('escSaved');
+  });
+}
+
+function saveAndRefresh(msgId){
+  persistCfg(); compute(); renderAll();
+  const m = $('#'+msgId); if(m){ m.classList.add('show'); setTimeout(()=>m.classList.remove('show'),1600); }
+}
+$('#btnAddTope').onclick = ()=>{
+  const pers = Object.keys(CONFIG.topes).sort();
+  const next = pers.length ? nextPeriodo(pers[pers.length-1]) : '';
+  CONFIG.topes[next||'AAAAMM'] = 0;
+  renderParams();
+};
+$('#btnAddAum').onclick = ()=>{
+  const pers = Object.keys(CONFIG.aumentos).sort();
+  const next = pers.length ? nextPeriodo(pers[pers.length-1]) : '';
+  CONFIG.aumentos[next||'AAAAMM'] = 0;
+  renderParams();
+};
+$('#btnSaveParams').onclick = ()=>{
+  CONFIG.tasas = {gan:+$('#rGan').value||35, sijp:+$('#rSijp').value||11, inssjp:+$('#rInssjp').value||3, osoc:+$('#rOsoc').value||3,
+                  antFA:+$('#rAntFA').value||2, antAY:+$('#rAntAY').value||1.6};
+  saveAndRefresh('paramSaved');
+};
+$('#btnEscNuevo').onclick = ()=>{
+  const pers = Object.keys(CONFIG.escalas).sort();
+  if(!pers.length){ alert('No hay escala base para copiar.'); return; }
+  const base = pers[pers.length-1];
+  const nuevo = prompt('Período nuevo (AAAAMM):', nextPeriodo(base));
+  if(!nuevo || !/^\d{6}$/.test(nuevo.trim())) return;
+  const pct = parseFloat(prompt('% de aumento a aplicar sobre la escala de '+perLabel(base)+' (ej.: 3,5). Poné 0 para copiar igual:', CONFIG.aumentos[nuevo.trim()] ?? 0)?.replace(',','.'))||0;
+  const f = 1+pct/100;
+  const src = CONFIG.escalas[base];
+  const dst = {};
+  for(const k of ESC_ORDEN){
+    const e = src[k]; if(!e) continue;
+    dst[k] = {b:+(e.b*f).toFixed(6), p:e.p==null?null:+(e.p*f).toFixed(6), a1:+(e.a1*f).toFixed(6), a2:+(e.a2*f).toFixed(6)};
+  }
+  CONFIG.escalas[nuevo.trim()] = dst;
+  if(pct && CONFIG.aumentos[nuevo.trim()]==null) CONFIG.aumentos[nuevo.trim()] = pct;
+  renderParams(); $('#escPeriodo').value = nuevo.trim(); renderEscEditor(); saveAndRefresh('escSaved');
+};
+$('#btnEscBorrar').onclick = ()=>{
+  const per = $('#escPeriodo').value; if(!per) return;
+  if(confirm('¿Eliminar la escala de '+perLabel(per)+'?')){ delete CONFIG.escalas[per]; renderParams(); saveAndRefresh('escSaved'); }
+};
+$('#escPeriodo').onchange = renderEscEditor;
+$('#btnSapUpload').onclick = ()=>$('#sapFile').click();
+$('#sapFile').onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const sheets = await readXlsx(await f.arrayBuffer());
+    const map = parseSapCat(sheets);
+    if(Object.keys(map).length<5){ alert('No encontré columnas "Nº pers." y "GrProf" en el archivo.'); }
+    else { SAPCAT = map; saveAndRefresh('paramSaved'); alert('Categorías SAP actualizadas: '+Object.keys(map).length+' legajos.'); }
+  }catch(err){ alert('No pude leer el archivo.'); }
+  e.target.value='';
+};
+$('#btnCfgExp').onclick = ()=>{
+  const blob = new Blob([JSON.stringify({config:CONFIG, sapcat:SAPCAT},null,1)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'config_control_liquidacion_v2.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('#btnCfgImp').onclick = ()=>$('#cfgFile').click();
+$('#cfgFile').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{ try{
+    const c = JSON.parse(rd.result);
+    if(c.config && c.config.topes){ CONFIG=c.config; if(c.sapcat) SAPCAT=c.sapcat; renderParams(); saveAndRefresh('paramSaved'); }
+    else if(c.topes && c.tasas){ CONFIG=Object.assign(CONFIG,c); renderParams(); saveAndRefresh('paramSaved'); } /* config v1 */
+    else alert('El archivo de configuración no es válido.');
+  }catch(err){ alert('El archivo de configuración no es válido.'); } };
+  rd.readAsText(f); e.target.value='';
+};
+
+/* ================= DICCIONARIO ================= */
+function renderDic(){
+  const mk = (title,color,list)=>`<div class="dic-card"><h4 style="background:${color}">${title} · ${list.length}</h4><ul>${
+    list.map(c=>`<li><code>${c}</code><span>${DESCRIPCIONES[c]||''}</span></li>`).join('')}</ul></div>`;
+  $('#dicGrid').innerHTML = mk('Remunerativos','#1E8449',REM) + mk('No remunerativos','#B9770E',NOREM) + mk('Descuentos / Retenciones','#566573',DESC);
+}
+
+/* ================= EXPORTAR INFORME ================= */
+$('#btnExport').onclick = ()=>{
+  if(!PERIODOS.length){ alert('Primero subí al menos un archivo de liquidación.'); return; }
+  const sheets = [];
+  const res = [['Período','Legajos','Ganancias >35%','MOPRE excede','Básico mayor','Básico menor (prop.)','Sin cat./escala','Present. no cobra','Present. difiere','Antig. no entera','0041 tramo','0468 fuera','FA sin 0468','0210 fuera AY','Hs.ex. en AY','0251 % dist.','0251 nuevo','Aum. FC < parit.','Aum. conv. < parit.','Tope MOPRE','Paritaria %']];
+  for(const p of PERIODOS){ const c = counts(p);
+    res.push([perLabel(p)+' ('+p+')', c.legajos, c.gan, c.sinTope?'SIN TOPE':c.mopre, c.bMayor, c.bMenor, c.bSin, c.presNo, c.presDif, c.antNE, c.tramo, c.f468fuera, c.f468falta, c.c210, c.hsAY, c.c251d, c.c251n, c.aumFC, c.aumConv, CONFIG.topes[p]??'—', CONFIG.aumentos[p]??'—']); }
+  sheets.push({name:'Resumen', aoa:res});
+  for(const p of PERIODOS){
+    const g = [['Legajo','Convenio','Total Remunerativo','Límite 35%','Imp. Retenido /4T2','Exceso','Estado Ganancias','Tope MOPRE','/321','Exc./321','/351','Exc./351','/361','Exc./361','Estado MOPRE']];
+    const e = [['Legajo','Convenio','Clave SAP','Categoría','Básico liquidado','Básico escala','Dif.','Estado Básico','0306','Present. esperado','Estado Present.','0040','Años derivados','Estado Antig.','0041','Adic. esperado','Estado 0041']];
+    const a = [['Legajo','Convenio','0468','Estado 0468','0210','Tiene 0308/09/10','Estado 0210','Hs. Extras','Estado Hs. AY','0251 mes ant.','0251 actual','Var. $','Var. %','Estado 0251']];
+    const u = [['Legajo','Convenio','Clave SAP','Concepto','Sueldo mes ant.','Sueldo actual','Aumento %','Paritaria %','Estado Aumento']];
+    for(const r of RESULTS[p]){
+      g.push([+r.leg||r.leg, r.conv, r.totalRem, r.lim, r.imp, r.excGan, r.stGan, r.tope??'SIN TOPE', r.v321, r.ex321??'', r.v351, r.ex351??'', r.v361, r.ex361??'', r.stMopre]);
+      e.push([+r.leg||r.leg, r.conv, r.grp, r.cat, r.bLiq, r.bEsc??'', r.difB??'', r.stB, r.p306, r.pEsp??'', r.stP, r.c40, r.anios??'', r.stAnt, r.c41, r.adicEsp??'', r.st41]);
+      a.push([+r.leg||r.leg, r.conv, r.c468, r.st468, r.c210, r.hs>0.01?'Sí':'No', r.st210, r.hs, r.stHs, r.c251prev??'', r.c251, r.var251??'', r.pct251??'', r.st251]);
+      u.push([+r.leg||r.leg, r.conv, r.grp, r.concepto, r.sPrev??'', r.sAct, r.aumReal??'', r.aumPct??'', r.stAum]);
+    }
+    sheets.push({name:('Ganancias '+p).slice(0,31), aoa:g});
+    sheets.push({name:('Escala-Antig '+p).slice(0,31), aoa:e});
+    sheets.push({name:('Auditoría '+p).slice(0,31), aoa:a});
+    sheets.push({name:('Aumentos '+p).slice(0,31), aoa:u});
+  }
+  const bytes = buildXlsx(sheets);
+  const blob = new Blob([bytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.download = 'Informe_Control_Liquidacion.xlsx';
+  link.click(); URL.revokeObjectURL(url);
+};
+
+/* ================= NAVEGACIÓN Y CARGA ================= */
+function switchView(v){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id==='v-'+v));
+  if(v==='parametros') renderParams();
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
+
+const drop = $('#drop');
+drop.onclick = ()=>$('#fileInput').click();
+drop.onkeydown = e=>{ if(e.key==='Enter'||e.key===' ') $('#fileInput').click(); };
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop', e=>handleFiles(e.dataTransfer.files));
+$('#fileInput').onchange = e=>{ handleFiles(e.target.files); e.target.value=''; };
+
+async function handleFiles(list){
+  if(typeof DecompressionStream === 'undefined'){
+    $('#banners').insertAdjacentHTML('beforeend',
+      `<div class="banner bad"><span>✕</span><span><b>Tu navegador es muy antiguo para leer Excel sin conexión.</b> Abrí la app con una versión reciente de Chrome, Edge o Firefox.</span></div>`);
+    return;
+  }
+  const errs = []; let sapMsg = null;
+  for(const f of [...list]){
+    try{
+      const buf = await f.arrayBuffer();
+      const sheets = await readXlsx(buf);
+      const rows = parseWorkbook(sheets);
+      if(rows.length){ FILES.push({name:f.name, rows}); continue; }
+      const map = parseSapCat(sheets);
+      if(Object.keys(map).length>=5){ SAPCAT = map; persistCfg(); sapMsg = Object.keys(map).length; continue; }
+      errs.push(f.name);
+    }catch(err){ errs.push(f.name); }
+  }
+  rebuild();
+  if(sapMsg) $('#banners').insertAdjacentHTML('beforeend',
+    `<div class="banner ok"><span>✓</span><span><b>Categorías SAP actualizadas: ${sapMsg} legajos.</b> Se aplican a todos los períodos cargados.</span></div>`);
+  if(errs.length){
+    $('#banners').insertAdjacentHTML('beforeend',
+      `<div class="banner bad"><span>✕</span><span><b>No pude leer: ${errs.join(', ')}.</b> Debe ser el volcado de liquidación (columnas "Número de personal", "Período para nómina", "CC-nómina", "Importe") o el export SAP de categorías ("Nº pers." + "GrProf").</span></div>`);
+  }
+}
+
+$('#btnClear').onclick = ()=>{ FILES=[]; rebuild(); };
+$('#selPeriodo').onchange = ()=>{ renderResumen(); renderNavPills(); };
+$('#gPeriodo').onchange = renderGan; $('#gBuscar').oninput = renderGan; $('#gConv').onchange = renderGan; $('#gSolo').onchange = renderGan;
+$('#ePeriodo').onchange = renderEsc; $('#eBuscar').oninput = renderEsc; $('#eConv').onchange = renderEsc; $('#eSolo').onchange = renderEsc;
+$('#aPeriodo').onchange = renderAud; $('#aBuscar').oninput = renderAud; $('#aSolo').onchange = renderAud;
+$('#uPeriodo').onchange = renderAum; $('#uBuscar').oninput = renderAum; $('#uConv').onchange = renderAum; $('#uSolo').onchange = renderAum;
+
+/* ================= INICIO ================= */
+(async ()=>{ await restoreCfg(); renderParams(); renderDic(); renderAll(); fetchTopesRemotos(); })();
+</script>
+</body>
+</html>
